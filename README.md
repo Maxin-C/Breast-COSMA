@@ -10,7 +10,7 @@ pip install -r requirements.txt
 ## 运行服务
 在项目根目录下，使用uvicorn来启动服务：
 ```
-uvicorn main:app --reload
+python app.py
 ```
 服务将默认在 http://127.0.0.1:8000 启动。
 

@@ -1,5 +1,5 @@
-fastapi
-uvicorn[standard]
-websockets
+Flask
+Flask-SocketIO
+eventlet
 numpy
 opencv-python-headless

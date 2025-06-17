@@ -1,0 +1,13 @@
+{
+    "st_layers": 8, 
+    "st_num_heads": 8, 
+    "st_hidden_dim": 1024, 
+    "mt_layers": 8, 
+    "mt_num_heads": 8, 
+    "mt_hidden_dim": 1024, 
+    "ma_dim": 64, 
+    "mcb_num_heads": 8,
+    "sk_embed_dim": 256,
+    "sk_hidden_dim": 512,
+    "sk_num_layers": 4
+}

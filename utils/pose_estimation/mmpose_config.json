@@ -1,0 +1,8 @@
+{
+    "det_config": "utils/upper_body_detection/model_dict/rtmdet_m_8xb32-300e_coco.py",
+    "det_checkpoint": "utils/upper_body_detection/model_dict/rtmdet_m_8xb32-300e_coco_20220719_112220-229f527c.pth",
+    "pose2d_config": "utils/upper_body_detection/model_dict/rtmpose-m_8xb256-420e_aic-coco-256x192.py",
+    "pose2d_checkpoint": "utils/upper_body_detection/model_dict/rtmpose-m_simcc-aic-coco_pt-aic-coco_420e-256x192-63eb25f7_20230126.pth",
+    "pose3d_config": "utils/upper_body_detection/model_dict/motionbert_dstformer-ft-243frm_8xb32-120e_h36m.py",
+    "pose3d_checkpoint": "utils/upper_body_detection/model_dict/motionbert_ft_h36m-d80af323_20230531.pth"
+}
