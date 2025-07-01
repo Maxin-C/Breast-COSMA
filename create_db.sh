@@ -72,36 +72,38 @@ CREATE TABLE IF NOT EXISTS calendar_schedule (
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
--- 6. Create the 'recovery_records' table
 CREATE TABLE IF NOT EXISTS recovery_records (
     record_id INT PRIMARY KEY,
     user_id INT,
-    record_date DATE,
-    exercise_id INT,
-    duration_minutes INT,
-    repetitions_completed INT,
-    FOREIGN KEY (user_id) REFERENCES users(user_id),
-    FOREIGN KEY (exercise_id) REFERENCES exercises(exercise_id)
+    record_date DATETIME, -- 使用 DATETIME 更精确地记录发生时间
+    notes TEXT, -- 可以添加备注字段，记录本次记录的总体情况
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
--- 7. Create the 'recovery_assistant' table
-CREATE TABLE IF NOT EXISTS recovery_assistant (
-    assistant_id INT PRIMARY KEY,
-    name VARCHAR(100),
-    avatar_url VARCHAR(255),
-    dialogue_flow_id VARCHAR(100)
+CREATE TABLE IF NOT EXISTS recovery_record_details (
+    record_detail_id INT PRIMARY KEY AUTO_INCREMENT, -- 详情ID，自动增长
+    record_id INT, -- 外键，关联到 recovery_records 表
+    exercise_id INT, -- 外键，关联到 exercises 表
+    actual_duration_minutes INT, -- 实际锻炼时长
+    actual_repetitions_completed INT, -- 实际完成重复次数
+    completion_timestamp DATETIME, -- 该次具体运动完成的时间戳
+    FOREIGN KEY (record_id) REFERENCES recovery_records(record_id),
+    FOREIGN KEY (exercise_id) REFERENCES exercises(exercise_id)
 );
 
 -- 8. Create the 'messages_chat' table
 CREATE TABLE IF NOT EXISTS messages_chat (
-    message_id INT PRIMARY KEY,
-    sender_id INT,
-    receiver_id INT,
+    message_id INT PRIMARY KEY AUTO_INCREMENT,
+    conversation_id VARCHAR(255), -- 新增字段，用于标识一个完整的对话会话
+    sender_id INT, -- 发送者ID (可以是 user_id 或 assistant_id)
+    sender_type ENUM('user', 'assistant', 'professional'), -- 新增字段，发送者类型
+    receiver_id INT, -- 接收者ID (可以是 user_id 或 assistant_id)
+    receiver_type ENUM('user', 'assistant', 'professional'), -- 新增字段，接收者类型
     message_text TEXT,
-    message_image VARCHAR(255),
     timestamp DATETIME,
-    FOREIGN KEY (sender_id) REFERENCES users(user_id),
-    FOREIGN KEY (receiver_id) REFERENCES recovery_assistant(assistant_id)
+    INDEX (conversation_id), -- 为对话ID添加索引，便于查询
+    INDEX (sender_id, sender_type), -- 为发送者添加索引
+    INDEX (receiver_id, receiver_type) -- 为接收者添加索引
 );
 
 -- 9. Create the 'video_slice_images' table
