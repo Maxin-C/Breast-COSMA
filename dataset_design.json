@@ -1,0 +1,338 @@
+{
+    "database_structure": {
+      "tables": [
+        {
+          "table_name": "用户 (Users)",
+          "description": "存储用户信息 (Stores user information)",
+          "fields": [
+            {
+              "field_name": "user_id",
+              "data_type": "INT",
+              "constraints": "Primary Key",
+              "description": "用户唯一ID (Unique user ID)"
+            },
+            {
+              "field_name": "wechat_openid",
+              "data_type": "VARCHAR(255)",
+              "description": "微信OpenID，用于用户身份识别 (WeChat OpenID, for user identification)"
+            },
+            {
+              "field_name": "name",
+              "data_type": "VARCHAR(100)",
+              "description": "用户名 (User's name)"
+            },
+            {
+              "field_name": "phone_number",
+              "data_type": "VARCHAR(20)",
+              "description": "用户手机号 (User's phone number)"
+            },
+            {
+              "field_name": "registration_date",
+              "data_type": "DATETIME",
+              "description": "注册日期和时间 (Date and time of registration)"
+            },
+            {
+              "field_name": "last_login_date",
+              "data_type": "DATETIME",
+              "description": "上次登录日期和时间 (Date and time of last login)"
+            }
+          ]
+        },
+        {
+          "table_name": "康复计划 (Recovery Plans)",
+          "description": "存储不同的康复计划 (Stores different recovery programs)",
+          "fields": [
+            {
+              "field_name": "plan_id",
+              "data_type": "INT",
+              "constraints": "Primary Key",
+              "description": "康复计划唯一ID (Unique ID for the recovery plan)"
+            },
+            {
+              "field_name": "plan_name",
+              "data_type": "VARCHAR(100)",
+              "description": "计划名称 (e.g., '第一阶段：早期康复') (Name of the plan (e.g., 'Phase 1: Early Recovery'))"
+            },
+            {
+              "field_name": "description",
+              "data_type": "TEXT",
+              "description": "计划详细描述 (Detailed description of the plan)"
+            },
+            {
+              "field_name": "start_date",
+              "data_type": "DATE",
+              "description": "计划开始日期 (Start date of the plan)"
+            },
+            {
+              "field_name": "end_date",
+              "data_type": "DATE",
+              "description": "计划结束日期 (End date of the plan)"
+            }
+          ]
+        },
+        {
+          "table_name": "运动 (Exercises)",
+          "description": "存储每个运动的详细信息 (Stores details about each exercise)",
+          "fields": [
+            {
+              "field_name": "exercise_id",
+              "data_type": "INT",
+              "constraints": "Primary Key",
+              "description": "运动唯一ID (Unique exercise ID)"
+            },
+            {
+              "field_name": "exercise_name",
+              "data_type": "VARCHAR(100)",
+              "description": "运动名称 (e.g., '手臂画圈') (Name of the exercise (e.g., 'Arm Circles'))"
+            },
+            {
+              "field_name": "description",
+              "data_type": "TEXT",
+              "description": "运动说明 (Instructions for the exercise)"
+            },
+            {
+              "field_name": "video_url",
+              "data_type": "VARCHAR(255)",
+              "description": "运动视频URL (URL of the exercise video)"
+            },
+            {
+              "field_name": "image_url",
+              "data_type": "VARCHAR(255)",
+              "description": "运动图像URL (URL of the exercise image)"
+            },
+            {
+              "field_name": "duration_minutes",
+              "data_type": "INT",
+              "description": "推荐时长（分钟）(Recommended duration in minutes)"
+            },
+            {
+              "field_name": "repetitions",
+              "data_type": "INT",
+              "description": "推荐重复次数 (Recommended number of repetitions)"
+            }
+          ]
+        },
+        {
+          "table_name": "用户康复计划 (User Recovery Plan)",
+          "description": "连接用户和他们分配的康复计划 (Links users to their assigned recovery plans)",
+          "fields": [
+            {
+              "field_name": "user_plan_id",
+              "data_type": "INT",
+              "constraints": "Primary Key",
+              "description": "用户计划记录唯一ID (Unique ID for the user's plan record)"
+            },
+            {
+              "field_name": "user_id",
+              "data_type": "INT",
+              "constraints": "Foreign Key",
+              "description": "用户ID (User's ID)"
+            },
+            {
+              "field_name": "plan_id",
+              "data_type": "INT",
+              "constraints": "Foreign Key",
+              "description": "康复计划ID (Recovery plan's ID)"
+            },
+            {
+              "field_name": "assigned_date",
+              "data_type": "DATETIME",
+              "description": "计划分配给用户的日期 (Date when the plan was assigned to the user)"
+            },
+            {
+              "field_name": "status",
+              "data_type": "VARCHAR(20)",
+              "description": "计划状态 (e.g., '活跃', '已完成', '暂停') (Status of the plan (e.g., 'Active', 'Completed', 'Paused'))"
+            }
+          ]
+        },
+        {
+          "table_name": "日历/日程 (Calendar/Schedule)",
+          "description": "存储用户的个性化运动和预约日程 (Stores the user's personalized schedule for exercises and appointments)",
+          "fields": [
+            {
+              "field_name": "schedule_id",
+              "data_type": "INT",
+              "constraints": "Primary Key",
+              "description": "日程唯一ID (Unique schedule ID)"
+            },
+            {
+              "field_name": "user_id",
+              "data_type": "INT",
+              "constraints": "Foreign Key",
+              "description": "用户ID (User's ID)"
+            },
+            {
+              "field_name": "schedule_date",
+              "data_type": "DATE",
+              "description": "预定事件日期 (Date of the scheduled event)"
+            },
+            {
+              "field_name": "schedule_time",
+              "data_type": "TIME",
+              "description": "预定事件时间 (Time of the scheduled event)"
+            },
+            {
+              "field_name": "type",
+              "data_type": "VARCHAR(50)",
+              "description": "事件类型 (e.g., '运动', '预约', '签到') (Type of event (e.g., 'Exercise', 'Appointment', 'Check-in'))"
+            },
+            {
+              "field_name": "event_details",
+              "data_type": "TEXT",
+              "description": "事件详情 (e.g., '完成运动 A') (Details of the event (e.g., 'Complete Exercise A'))"
+            },
+            {
+              "field_name": "is_completed",
+              "data_type": "BOOLEAN",
+              "description": "任务是否完成 (True if the task is completed, False otherwise)"
+            },
+            {
+              "field_name": "completion_time",
+              "data_type": "DATETIME",
+              "description": "任务标记为完成的时间 (Time when the task was marked as completed)"
+            }
+          ]
+        },
+        {
+          "table_name": "康复记录 (Recovery Records)",
+          "description": "跟踪用户的进度和签到 (Tracks the user's progress and check-ins)",
+          "fields": [
+            {
+              "field_name": "record_id",
+              "data_type": "INT",
+              "constraints": "Primary Key",
+              "description": "记录唯一ID (Unique record ID)"
+            },
+            {
+              "field_name": "user_id",
+              "data_type": "INT",
+              "constraints": "Foreign Key",
+              "description": "用户ID (User's ID)"
+            },
+            {
+              "field_name": "record_date",
+              "data_type": "DATE",
+              "description": "记录日期 (Date of the record)"
+            },
+            {
+              "field_name": "exercise_id",
+              "data_type": "INT",
+              "constraints": "Foreign Key",
+              "description": "执行的运动ID (ID of the exercise performed)"
+            },
+            {
+              "field_name": "duration_minutes",
+              "data_type": "INT",
+              "description": "用户实际锻炼时长（分钟）(Actual duration the user exercised)"
+            },
+            {
+              "field_name": "repetitions_completed",
+              "data_type": "INT",
+              "description": "完成的实际重复次数 (Actual repetitions completed)"
+            }
+          ]
+        },
+        {
+          "table_name": "消息/聊天 (Messages/Chat)",
+          "description": "存储用户和智能康复助手或专业人士之间的聊天消息 (Stores chat messages between the user and the 'intelligent recovery assistant' or a professional)",
+          "fields": [
+            {
+              "field_name": "message_id",
+              "data_type": "INT",
+              "constraints": "Primary Key",
+              "description": "消息唯一ID (Unique message ID)"
+            },
+            {
+              "field_name": "sender_id",
+              "data_type": "INT",
+              "constraints": "Foreign Key",
+              "description": "消息发送者ID (用户或助手) (ID of the message sender (user or assistant))"
+            },
+            {
+              "field_name": "receiver_id",
+              "data_type": "INT",
+              "constraints": "Foreign Key",
+              "description": "消息接收者ID (ID of the message receiver)"
+            },
+            {
+              "field_name": "message_text",
+              "data_type": "TEXT",
+              "description": "消息内容 (Content of the message)"
+            },
+            {
+              "field_name": "timestamp",
+              "data_type": "DATETIME",
+              "description": "消息发送日期和时间 (Date and time the message was sent)"
+            }
+          ]
+        },
+        {
+          "table_name": "康复助手 (Recovery Assistant)",
+          "description": "存储关于AI/机器人助手的信息 (Stores information about the AI/bot assistant)",
+          "fields": [
+            {
+              "field_name": "assistant_id",
+              "data_type": "INT",
+              "constraints": "Primary Key",
+              "description": "助手ID (ID of the assistant)"
+            },
+            {
+              "field_name": "name",
+              "data_type": "VARCHAR(100)",
+              "description": "助手名称 (e.g., '智能康复助手') (Name of the assistant (e.g., 'Intelligent Recovery Assistant'))"
+            },
+            {
+              "field_name": "avatar_url",
+              "data_type": "VARCHAR(255)",
+              "description": "助手头像URL (Avatar URL for the assistant)"
+            },
+            {
+              "field_name": "dialogue_flow_id",
+              "data_type": "VARCHAR(100)",
+              "description": "对话流程或模型ID (ID of the dialogue flow or model being used)"
+            }
+          ]
+        },
+        {
+          "table_name": "视频切片图像 (Video Slice Images)",
+          "description": "存储从前端传递的视频切片图像 (Stores video slice images passed from the frontend)",
+          "fields": [
+            {
+              "field_name": "image_id",
+              "data_type": "INT",
+              "constraints": "Primary Key",
+              "description": "图像的唯一标识符 (Unique identifier for the image)"
+            },
+            {
+              "field_name": "exercise_id",
+              "data_type": "INT",
+              "constraints": "Foreign Key",
+              "description": "关联的锻炼ID (ID of the associated exercise)"
+            },
+            {
+              "field_name": "record_id",
+              "data_type": "INT",
+              "constraints": "Foreign Key",
+              "description": "关联的康复记录ID (ID of the associated recovery record)"
+            },
+            {
+              "field_name": "slice_order",
+              "data_type": "INT",
+              "description": "视频切片顺序 (Order of the video slice)"
+            },
+            {
+              "field_name": "image_path",
+              "data_type": "VARCHAR(255)",
+              "description": "图像文件路径或URL (Path or URL to the image file)"
+            },
+            {
+              "field_name": "timestamp",
+              "data_type": "DATETIME",
+              "description": "图像对应视频中的时间戳 (Timestamp of the image in the video)"
+            }
+          ]
+        }
+      ]
+    }
+  }

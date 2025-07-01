@@ -20,8 +20,8 @@ def none():
     print("S")
     return jsonify({'error': 'Missing file or form data (layout, frames)'}), 200
 
-@app.route("/test", methods=['POST'])
-def test():
+@app.route("/pose_estimation", methods=['POST'])
+def pose_estimation():
     """
     接收小程序上传的雪碧图，切割成多帧后进行处理
     """
@@ -51,47 +51,6 @@ def test():
         sprite_path = os.path.join(session_folder, secure_filename(file.filename))
         file.save(sprite_path)
         print(f"Sprite sheet saved to: {sprite_path}")
-
-        # 4. 【核心】使用Pillow切割雪碧图
-        img = Image.open(sprite_path)
-        
-        # 解析布局
-        cols_str, rows_str = layout.split('x')
-        cols, rows = int(cols_str), int(rows_str)
-        total_frames = int(total_frames_str)
-
-        # 【关键修复】使用整数除法(//)确保尺寸为整数
-        single_frame_width = img.width // cols
-        single_frame_height = img.height // rows
-
-        extracted_frames_paths = []
-        frames_count = 0
-
-        print("Starting to split sprite sheet...")
-        for r in range(rows):
-            for c in range(cols):
-                if frames_count >= total_frames:
-                    break
-                
-                # 所有坐标现在都基于整数运算，是安全的
-                left = c * single_frame_width
-                top = r * single_frame_height
-                right = left + single_frame_width
-                bottom = top + single_frame_height
-
-                # 切割出单帧
-                single_frame_img = img.crop((left, top, right, bottom))
-                
-                # 保存单帧图片
-                frame_filename = f"frame_{frames_count:02d}.jpg"
-                frame_path = os.path.join(session_folder, frame_filename)
-                single_frame_img.save(frame_path)
-                extracted_frames_paths.append(frame_path)
-                
-                frames_count += 1
-        
-        print(f"Successfully split into {len(extracted_frames_paths)} frames.")
-        print("Frame paths:", extracted_frames_paths)
 
         # 5. 【占位符】将切割出的帧图像序列送入AI模型进行推理
         # ==========================================================
