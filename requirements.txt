@@ -183,3 +183,7 @@ xtcocotools==1.14.3
 yacs==0.1.8
 yapf==0.43.0
 zipp==3.17.0
+flask_sqlalchemy
+flask_wtf
+mysql-connector-python
+PyMySQL

@@ -1,0 +1,139 @@
+from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime, date, time
+
+db = SQLAlchemy()
+
+# Base model with a to_dict method for JSON serialization
+class Base(db.Model):
+    __abstract__ = True
+
+    def to_dict(self):
+        # This method converts the SQLAlchemy model instance to a dictionary.
+        # It handles datetime, date, and time objects for JSON serialization.
+        data = {}
+        for column in self.__table__.columns:
+            value = getattr(self, column.name)
+            if isinstance(value, datetime):
+                data[column.name] = value.isoformat()
+            elif isinstance(value, date):
+                data[column.name] = value.isoformat()
+            elif isinstance(value, time):
+                data[column.name] = value.isoformat()
+            else:
+                data[column.name] = value
+        return data
+
+class User(Base):
+    __tablename__ = 'users'
+    user_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    wechat_openid = db.Column(db.String(255))
+    srrsh_id = db.Column(db.Integer)
+    name = db.Column(db.String(100))
+    phone_number = db.Column(db.String(20))
+    registration_date = db.Column(db.DateTime, default=datetime.utcnow)
+    last_login_date = db.Column(db.DateTime)
+
+    recovery_plans = db.relationship('UserRecoveryPlan', backref='user', lazy=True)
+    calendar_schedules = db.relationship('CalendarSchedule', backref='user', lazy=True)
+    recovery_records = db.relationship('RecoveryRecord', backref='user', lazy=True)
+
+class RecoveryPlan(Base):
+    __tablename__ = 'recovery_plans'
+    plan_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    plan_name = db.Column(db.String(100))
+    description = db.Column(db.Text)
+    start_date = db.Column(db.Date)
+    end_date = db.Column(db.Date)
+
+    user_recovery_plans = db.relationship('UserRecoveryPlan', backref='recovery_plan', lazy=True)
+
+class Exercise(Base):
+    __tablename__ = 'exercises'
+    exercise_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    exercise_name = db.Column(db.String(100))
+    description = db.Column(db.Text)
+    video_url = db.Column(db.String(255))
+    image_url = db.Column(db.String(255))
+    duration_minutes = db.Column(db.Integer)
+    repetitions = db.Column(db.Integer)
+
+    recovery_record_details = db.relationship('RecoveryRecordDetail', backref='exercise', lazy=True)
+    video_slice_images = db.relationship('VideoSliceImage', backref='exercise', lazy=True)
+
+class UserRecoveryPlan(Base):
+    __tablename__ = 'user_recovery_plans'
+    user_plan_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'))
+    plan_id = db.Column(db.Integer, db.ForeignKey('recovery_plans.plan_id'))
+    assigned_date = db.Column(db.DateTime, default=datetime.utcnow)
+    status = db.Column(db.String(20))
+
+class CalendarSchedule(Base):
+    __tablename__ = 'calendar_schedule'
+    schedule_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'))
+    schedule_date = db.Column(db.Date)
+    schedule_time = db.Column(db.Time)
+    type = db.Column(db.String(50))
+    event_details = db.Column(db.Text)
+    is_completed = db.Column(db.Boolean)
+    completion_time = db.Column(db.DateTime)
+
+class RecoveryRecord(Base):
+    __tablename__ = 'recovery_records'
+    record_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'))
+    record_date = db.Column(db.DateTime, default=datetime.utcnow)
+    notes = db.Column(db.Text)
+
+    record_details = db.relationship('RecoveryRecordDetail', backref='recovery_record', lazy=True)
+    video_slice_images = db.relationship('VideoSliceImage', backref='recovery_record', lazy=True)
+
+class RecoveryRecordDetail(Base):
+    __tablename__ = 'recovery_record_details'
+    record_detail_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    record_id = db.Column(db.Integer, db.ForeignKey('recovery_records.record_id'))
+    exercise_id = db.Column(db.Integer, db.ForeignKey('exercises.exercise_id'))
+    actual_duration_minutes = db.Column(db.Integer)
+    actual_repetitions_completed = db.Column(db.Integer)
+    brief_evaluation = db.Column(db.String(50))
+    evaluation_details = db.Column(db.Text)
+    completion_timestamp = db.Column(db.DateTime)
+
+class MessageChat(Base):
+    __tablename__ = 'messages_chat'
+    message_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    conversation_id = db.Column(db.String(255))
+    sender_id = db.Column(db.Integer)
+    sender_type = db.Column(db.Enum('user', 'assistant', 'professional'))
+    receiver_id = db.Column(db.Integer)
+    receiver_type = db.Column(db.Enum('user', 'assistant', 'professional'))
+    message_text = db.Column(db.Text)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+class VideoSliceImage(Base):
+    __tablename__ = 'video_slice_images'
+    image_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    exercise_id = db.Column(db.Integer, db.ForeignKey('exercises.exercise_id'))
+    record_id = db.Column(db.Integer, db.ForeignKey('recovery_records.record_id'))
+    slice_order = db.Column(db.Integer)
+    image_path = db.Column(db.String(255))
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Form(Base):
+    __tablename__ = 'forms'
+    form_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    form_name = db.Column(db.String(255), nullable=False)
+    form_content = db.Column(db.Text, nullable=False) # Store form structure/questions (e.g., JSON string)
+
+    qol_records = db.relationship('QoL', backref='form', lazy=True)
+
+class QoL(Base):
+    __tablename__ = 'qol_records' # Changed to qol_records for better clarity
+    qol_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    form_id = db.Column(db.Integer, db.ForeignKey('forms.form_id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=False)
+    score = db.Column(db.Integer, nullable=False)
+    level = db.Column(db.String(50), nullable=False) # e.g., 'Excellent', 'Good', 'Fair', 'Poor'
+    # Adding a timestamp for when the QoL was recorded might be useful
+    submission_timestamp = db.Column(db.DateTime, default=datetime.utcnow)

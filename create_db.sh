@@ -19,7 +19,7 @@ USE $DATABASE_NAME;
 
 -- 1. Create the 'users' table
 CREATE TABLE IF NOT EXISTS users (
-    user_id INT PRIMARY KEY,
+    user_id INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
     wechat_openid VARCHAR(255),
     srrsh_id INT,
     name VARCHAR(100),
@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS users (
 
 -- 2. Create the 'recovery_plans' table
 CREATE TABLE IF NOT EXISTS recovery_plans (
-    plan_id INT PRIMARY KEY,
+    plan_id INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
     plan_name VARCHAR(100),
     description TEXT,
     start_date DATE,
@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS recovery_plans (
 
 -- 3. Create the 'exercises' table
 CREATE TABLE IF NOT EXISTS exercises (
-    exercise_id INT PRIMARY KEY,
+    exercise_id INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
     exercise_name VARCHAR(100),
     description TEXT,
     video_url VARCHAR(255),
@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS exercises (
 
 -- 4. Create the 'user_recovery_plans' table
 CREATE TABLE IF NOT EXISTS user_recovery_plans (
-    user_plan_id INT PRIMARY KEY,
+    user_plan_id INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
     user_id INT,
     plan_id INT,
     assigned_date DATETIME,
@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS user_recovery_plans (
 
 -- 5. Create the 'calendar_schedule' table
 CREATE TABLE IF NOT EXISTS calendar_schedule (
-    schedule_id INT PRIMARY KEY,
+    schedule_id INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
     user_id INT,
     schedule_date DATE,
     schedule_time TIME,
@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS calendar_schedule (
 );
 
 CREATE TABLE IF NOT EXISTS recovery_records (
-    record_id INT PRIMARY KEY,
+    record_id INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
     user_id INT,
     record_date DATETIME, -- 使用 DATETIME 更精确地记录发生时间
     notes TEXT, -- 可以添加备注字段，记录本次记录的总体情况
@@ -81,11 +81,13 @@ CREATE TABLE IF NOT EXISTS recovery_records (
 );
 
 CREATE TABLE IF NOT EXISTS recovery_record_details (
-    record_detail_id INT PRIMARY KEY AUTO_INCREMENT, -- 详情ID，自动增长
+    record_detail_id INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
     record_id INT, -- 外键，关联到 recovery_records 表
     exercise_id INT, -- 外键，关联到 exercises 表
     actual_duration_minutes INT, -- 实际锻炼时长
     actual_repetitions_completed INT, -- 实际完成重复次数
+    brief_evaluation VARCHAR(50),
+    evaluation_details TEXT,
     completion_timestamp DATETIME, -- 该次具体运动完成的时间戳
     FOREIGN KEY (record_id) REFERENCES recovery_records(record_id),
     FOREIGN KEY (exercise_id) REFERENCES exercises(exercise_id)
@@ -93,7 +95,7 @@ CREATE TABLE IF NOT EXISTS recovery_record_details (
 
 -- 8. Create the 'messages_chat' table
 CREATE TABLE IF NOT EXISTS messages_chat (
-    message_id INT PRIMARY KEY AUTO_INCREMENT,
+    message_id INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
     conversation_id VARCHAR(255), -- 新增字段，用于标识一个完整的对话会话
     sender_id INT, -- 发送者ID (可以是 user_id 或 assistant_id)
     sender_type ENUM('user', 'assistant', 'professional'), -- 新增字段，发送者类型
@@ -108,7 +110,7 @@ CREATE TABLE IF NOT EXISTS messages_chat (
 
 -- 9. Create the 'video_slice_images' table
 CREATE TABLE IF NOT EXISTS video_slice_images (
-    image_id INT PRIMARY KEY,
+    image_id INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
     exercise_id INT,
     record_id INT,
     slice_order INT,
@@ -116,6 +118,25 @@ CREATE TABLE IF NOT EXISTS video_slice_images (
     timestamp DATETIME,
     FOREIGN KEY (exercise_id) REFERENCES exercises(exercise_id),
     FOREIGN KEY (record_id) REFERENCES recovery_records(record_id)
+);
+
+-- 10. Create the 'form' table
+CREATE TABLE IF NOT EXISTS form (
+    form_id INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
+    form_name VARCHAR(50),
+    form_content TEXT
+);
+
+-- 11. Create the 'quality_of_life' table
+CREATE TABLE IF NOT EXISTS quality_of_life (
+    qol_id INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
+    form_id INT,
+    user_id INT,
+    score INT,
+    level VARCHAR(10),
+    timestamp DATETIME,
+    FOREIGN KEY (form_id) REFERENCES form(form_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
 "
