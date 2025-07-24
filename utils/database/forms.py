@@ -92,6 +92,7 @@ class RecoveryRecordDetailForm(FlaskForm):
 class MessageChatForm(FlaskForm):
     message_id = IntegerField('Message ID', validators=[Optional()]) # AUTO_INCREMENT, so optional for add
     conversation_id = StringField('Conversation ID', validators=[DataRequired(), Length(max=255)])
+    is_follow_up = BooleanField('Is Follow Up Conversation', validators=[DataRequired()])
     sender_id = IntegerField('Sender ID', validators=[DataRequired()])
     sender_type = SelectField('Sender Type', choices=[('user', 'User'), ('assistant', 'Assistant'), ('professional', 'Professional')], validators=[DataRequired()])
     receiver_id = IntegerField('Receiver ID', validators=[DataRequired()])

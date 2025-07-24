@@ -97,6 +97,7 @@ CREATE TABLE IF NOT EXISTS recovery_record_details (
 CREATE TABLE IF NOT EXISTS messages_chat (
     message_id INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
     conversation_id VARCHAR(255), -- 新增字段，用于标识一个完整的对话会话
+    is_follow_up BOOLEAN,
     sender_id INT, -- 发送者ID (可以是 user_id 或 assistant_id)
     sender_type ENUM('user', 'assistant', 'professional'), -- 新增字段，发送者类型
     receiver_id INT, -- 接收者ID (可以是 user_id 或 assistant_id)
