@@ -88,10 +88,13 @@ class RecoveryRecordDetailForm(FlaskForm):
     brief_evaluation = StringField('AI Evaluation Result in Brief', validators=[Optional()])
     evaluation_details = TextAreaField('AI Evaluation Result', validators=[Optional()])
     completion_timestamp = DateTimeField('Completion Timestamp (YYYY-MM-DD HH:MM:SS)', format='%Y-%m-%d %H:%M:%S', validators=[Optional()])
+    video_path = StringField('Video Path', validators=[Optional(), Length(max=255)]) # <--- 新增此行
+
 
 class MessageChatForm(FlaskForm):
     message_id = IntegerField('Message ID', validators=[Optional()]) # AUTO_INCREMENT, so optional for add
     conversation_id = StringField('Conversation ID', validators=[DataRequired(), Length(max=255)])
+    is_follow_up = BooleanField('Is Follow Up Conversation', validators=[DataRequired()])
     sender_id = IntegerField('Sender ID', validators=[DataRequired()])
     sender_type = SelectField('Sender Type', choices=[('user', 'User'), ('assistant', 'Assistant'), ('professional', 'Professional')], validators=[DataRequired()])
     receiver_id = IntegerField('Receiver ID', validators=[DataRequired()])
@@ -118,3 +121,18 @@ class QoLForm(FlaskForm):
     user_id = IntegerField('User Id', validators=[DataRequired()])
     score  = IntegerField('Score', validators=[DataRequired()])
     level = StringField('Level', validators=[DataRequired()])
+
+class NurseForm(FlaskForm):
+    nurse_id = IntegerField('Nurse ID', validators=[Optional()])
+    name = StringField('Name', validators=[DataRequired(), Length(max=100)])
+    username = StringField('Username', validators=[DataRequired(), Length(max=100)])
+    phone_number_suffix = StringField('Phone Number Suffix', validators=[DataRequired(), Length(min=6, max=6)])
+    registration_date = DateTimeField('Registration Date', format='%Y-%m-%d %H:%M:%S', validators=[Optional()])
+
+class NurseEvaluationForm(FlaskForm):
+    evaluation_id = IntegerField('Evaluation ID', validators=[Optional()])
+    record_detail_id = IntegerField('Record Detail ID', validators=[DataRequired()])
+    nurse_id = IntegerField('Nurse ID', validators=[DataRequired()])
+    score = IntegerField('Score', validators=[DataRequired(), NumberRange(min=0, max=9)])
+    feedback_text = TextAreaField('Feedback Text', validators=[Optional()])
+    evaluation_timestamp = DateTimeField('Timestamp', format='%Y-%m-%d %H:%M:%S', validators=[Optional()])

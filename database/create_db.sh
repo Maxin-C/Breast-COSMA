@@ -25,7 +25,8 @@ CREATE TABLE IF NOT EXISTS users (
     name VARCHAR(100),
     phone_number VARCHAR(20),
     registration_date DATETIME,
-    last_login_date DATETIME
+    last_login_date DATETIME,
+    extubation_status ENUM('已拔管', '未拔管') NOT NULL DEFAULT '未拔管' -- 新增字段
 );
 
 -- 2. Create the 'recovery_plans' table
@@ -89,6 +90,7 @@ CREATE TABLE IF NOT EXISTS recovery_record_details (
     brief_evaluation VARCHAR(50),
     evaluation_details TEXT,
     completion_timestamp DATETIME, -- 该次具体运动完成的时间戳
+    video_path VARCHAR(255),
     FOREIGN KEY (record_id) REFERENCES recovery_records(record_id),
     FOREIGN KEY (exercise_id) REFERENCES exercises(exercise_id)
 );
@@ -97,6 +99,7 @@ CREATE TABLE IF NOT EXISTS recovery_record_details (
 CREATE TABLE IF NOT EXISTS messages_chat (
     message_id INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
     conversation_id VARCHAR(255), -- 新增字段，用于标识一个完整的对话会话
+    is_follow_up BOOLEAN,
     sender_id INT, -- 发送者ID (可以是 user_id 或 assistant_id)
     sender_type ENUM('user', 'assistant', 'professional'), -- 新增字段，发送者类型
     receiver_id INT, -- 接收者ID (可以是 user_id 或 assistant_id)
@@ -137,6 +140,36 @@ CREATE TABLE IF NOT EXISTS quality_of_life (
     timestamp DATETIME,
     FOREIGN KEY (form_id) REFERENCES form(form_id),
     FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+
+-- 12. user_activity_log table (保持不变)
+CREATE TABLE IF NOT EXISTS user_activity_log (
+    log_id INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
+    user_id INT,
+    activity_type VARCHAR(50),
+    timestamp DATETIME,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+
+-- 13. nurses table (NEW)
+CREATE TABLE IF NOT EXISTS nurses (
+    nurse_id INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL,
+    username VARCHAR(100) NOT NULL UNIQUE, -- 姓名拼音首字母缩写
+    phone_number_suffix VARCHAR(6) NOT NULL, -- 手机号后六位作为密码
+    registration_date DATETIME
+);
+
+-- 14. nurse_evaluations table (NEW)
+CREATE TABLE IF NOT EXISTS nurse_evaluations (
+    evaluation_id INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
+    record_detail_id INT NOT NULL, -- 关联到具体的某一次康复记录详情
+    nurse_id INT NOT NULL, -- 评估的护士
+    score INT NOT NULL, -- 评分 (0-9)，必须提供
+    feedback_text TEXT, -- 意见文本，可以为空
+    evaluation_timestamp DATETIME,
+    FOREIGN KEY (record_detail_id) REFERENCES recovery_record_details(record_detail_id),
+    FOREIGN KEY (nurse_id) REFERENCES nurses(nurse_id)
 );
 
 "

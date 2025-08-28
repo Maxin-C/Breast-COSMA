@@ -1,0 +1,66 @@
+[
+    {
+        "name": "Background",
+        "desc": "This is the default state where no specific exercise is being performed. The body remains in a relaxed, neutral position with no active movements or stretches."
+    },
+    {
+        "name": "Grasping and Loosening Fist",
+        "desc": "This exercise involves making a fist and then opening and relaxing the hand."
+    },
+    {
+        "name": "Rotating the Wrist",
+        "desc": "This exercise involves moving the wrist in four directions: up, down, left, and right."
+    },
+    {
+        "name": "Flexing and Extending the Forearm",
+        "desc": "This exercise involves bending the forearm up so the hand is close to the shoulder, and then straightening the arm."
+    },
+    {
+        "name": "Touching the Shoulder",
+        "desc": "Use your healthy arm to support the affected arm. Lift the affected arm and use your hand to touch the opposite shoulder. Hold this position for a few seconds, then return to the starting position."
+    },
+    {
+        "name": "Touching the Ear",
+        "desc": "Use your healthy arm to support the affected arm. Lift the affected arm and use your hand to touch the ear on the same side of your head. Hold this position for a few seconds, then return to the starting position."
+    },
+    {
+        "name": "Deep Breathing Exercise",
+        "desc": "Deep Breathing Exercise: Place hands naturally in front of your chest, take slow, deep breaths, and exhale to completely relax your shoulders and chest. Place your hands naturally in front of your chest, take slow and deep breaths, and completely relax your shoulders and chest while exhaling."
+    },
+    {
+        "name": "Combing Hair Exercise",
+        "desc": "Combing Hair Exercise: Use the healthy hand to support and lift the affected limb, and use the affected limb to \"comb\" from front to back and from top to bottom. Use the healthy hand to support the affected arm, and then use the affected arm to perform a combing motion from front to back and top to bottom."
+    },
+    {
+        "name": "Shrugging Exercise",
+        "desc": "Shrugging Exercise: Rotate the shoulders forward and backward. This exercise involves shrugging or rotating the shoulders forward and backward."
+    },
+    {
+        "name": "Trunk Rotation Exercise",
+        "desc": "Trunk Rotation Exercise: Rotate the upper body left and right, swinging the arms gently back and forth. This exercise involves rotating the upper body from side to side while gently swinging the arms back and forth in front of and behind the body."
+    },
+    {
+        "name": "Overhead Ear Touch",
+        "desc": "Bring the affected arm over the head to touch the ear, then do the same with the healthy arm, alternating between the two. Gradually progress from a head-down position to a head-up, chest-out position."
+    },
+    {
+        "name": "Pendulum Exercise",
+        "desc": "Stand bent over at the waist, abduct the arms, cross them in front of you, and repeat multiple times. The range of motion should increase from small to large until both arms can be straightened."
+    },
+    {
+        "name": "Wall Climbing Exercise",
+        "desc": "Stand facing a wall, about one arm's length away. Use your healthy hand to reach up to the highest point and hold that position. Use the affected limb to gradually climb up the wall, moving up by a fingernail's width at a time, until the pain is unbearable. After reaching the highest point, pause for a moment, then slowly climb back down from the highest point."
+    },
+    {
+        "name": "Drawing Circles Exercise",
+        "desc": "Tie one end of a rope (elastic band) to a doorknob and hold the other end with your affected hand, standing facing the door. Rotate the rope in a circular motion, gradually increasing the range of motion from small to large and the frequency from slow to fast."
+    },
+    {
+        "name": "Pulley Exercise",
+        "desc": "Drape a rope (elastic band) over a horizontal bar that is higher than your head, with each hand holding one end. First, pull the rope down with your healthy hand to raise the affected limb until it reaches a slightly uncomfortable position. Then, raise your healthy limb, allowing the affected limb to descend naturally. Repeat this motion."
+    },
+    {
+        "name": "Back Washing Exercise",
+        "desc": "Place a towel on your back, holding both ends of the towel with your hands. The healthy side is on top and the affected side is on the bottom. Use the healthy side to pull the towel to stretch the shoulder joint of the affected upper limb."
+    }
+]

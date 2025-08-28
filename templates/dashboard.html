@@ -1,0 +1,27 @@
+{% extends "layout.html" %}
+{% block title %}仪表盘 - 康复助手{% endblock %}
+{% block head %}
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.3.3/dist/echarts.min.js"></script>
+{% endblock %}
+{% block content %}
+<div class="dashboard-grid">
+    <div class="charts-container">
+        <div class="chart-card"><h3>人群分布</h3><div id="population-chart" class="chart-box"></div></div>
+        <div class="chart-card"><h3>评估结果</h3><div id="evaluation-chart" class="chart-box"></div></div>
+        <div class="chart-card"><h3>生活质量</h3><div id="quality-chart" class="chart-box"></div></div>
+        <div class="chart-card"><h3>小程序使用情况</h3><div id="usage-chart" class="chart-box"></div></div>
+    </div>
+    <div class="overview-container">
+        <div class="overview-card">
+            <h2>项目整体情况</h2>
+            <div class="info-item"><div class="icon-bg"><i class="fa-solid fa-users-viewfinder"></i></div><div class="info-text"><span id="total-cases" class="value">0</span><span class="label">入组总病例数</span></div></div>
+            <div class="info-item"><div class="icon-bg"><i class="fa-solid fa-video"></i></div><div class="info-text"><span id="total-videos" class="value">0</span><span class="label">已获取视频项总数</span></div></div>
+            <div class="info-item"><div class="icon-bg"><i class="fa-solid fa-chart-line"></i></div><div class="info-text"><span id="total-reports" class="value">0</span><span class="label">智能分析报告数</span></div></div>
+            <div class="info-item"><div class="icon-bg"><i class="fa-solid fa-clock"></i></div><div class="info-text"><span id="duration-days" class="value">0<span class="unit">天</span></span><span class="label">项目执行时长</span></div></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% endblock %}

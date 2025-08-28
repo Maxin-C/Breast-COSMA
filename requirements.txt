@@ -21,6 +21,7 @@ crcmod==1.7
 cryptography==45.0.3
 cycler==0.12.1
 Cython==3.1.1
+dashscope==1.19.3
 debugpy==1.8.14
 decorator==5.2.1
 dnspython==2.7.0
@@ -187,3 +188,6 @@ flask_sqlalchemy
 flask_wtf
 mysql-connector-python
 PyMySQL
+gunicorn
+flask_compress
+openai

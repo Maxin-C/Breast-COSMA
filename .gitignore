@@ -3,3 +3,7 @@ uploads
 *.png
 *.pt
 *.pth
+*.env
+*.sql
+*.log
+static

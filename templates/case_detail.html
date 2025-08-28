@@ -1,0 +1,44 @@
+{% extends "layout.html" %}
+{% block title %}病例详情{% endblock %}
+{% block content %}
+<div class="case-detail-grid mt-4">
+    <div class="content-card p-0 d-flex flex-column fixed-height-sidebar">
+        <div class="patient-info p-3">
+            </div>
+        <div class="accordion-container flex-grow-1">
+            <div class="accordion accordion-flush" id="recordsAccordion">
+                </div>
+        </div>
+    </div>
+    <div class="content-card p-3 d-flex flex-column">
+        <h5 class="mb-3">锻炼视频</h5>
+        <div class="video-player-wrapper">
+            <video controls src="" style="width:100%; height:100%; background-color:#333;"></video>
+        </div>
+    </div>
+    <div class="d-flex flex-column gap-4">
+        <div class="content-card p-3 d-flex flex-column">
+            <h5 class="mb-2">智能评估报告</h5>
+            <div id="report-content" class="report-content-box"></div>
+        </div>
+        <div class="content-card p-3">
+             <h5 class="mb-3">请问您认为智能评估结果如何呢？</h5>
+             <form id="evaluation-form">
+                <textarea id="feedback-text" class="form-control" rows="3" placeholder="意见文本输入框 (可滚动)"></textarea>
+                <div class="rating-scale mt-3">
+                    <i class="fa-solid fa-face-frown"></i>
+                    {% for i in range(10) %}<div class="rating-item"><input type="radio" id="rating-{{i}}" name="rating" value="{{i}}" {% if i == 7 %}checked{% endif %}><label for="rating-{{i}}">{{i}}</label></div>{% endfor %}
+                    <i class="fa-solid fa-face-smile"></i>
+                </div>
+                 <div class="d-flex justify-content-end mt-3">
+                    <button type="submit" class="btn btn-primary">提交</button>
+                 </div>
+                 <p id="evaluation-status" class="mt-2"></p>
+             </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+    <script src="{{ url_for('static', filename='js/case_detail.js') }}"></script>
+{% endblock %}

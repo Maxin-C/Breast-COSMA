@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}康复助手{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    {% block head %}{% endblock %}
+</head>
+<body {% if user_id %}data-user-id="{{ user_id }}"{% endif %}>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <i class="fa-solid fa-ribbon"></i>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li class="{{ 'active' if active_page == 'dashboard' else '' }}"><a href="{{ url_for('main.index_page') }}"><i class="fa-solid fa-chart-pie"></i></a></li>
+                    <li class="{{ 'active' if active_page == 'cases' else '' }}"><a href="{{ url_for('main.cases_page') }}"><i class="fa-solid fa-users"></i></a></li>
+                    <li><a href="{{ url_for('auth.logout') }}"><i class="fa-solid fa-right-from-bracket"></i></a></li>
+                </ul>
+            </nav>
+        </aside>
+        <main class="main-content">
+            <header class="header">
+                <h1>乳腺癌术后智能康复助手 (护士端)</h1>
+                <p>浙江大学邵逸夫医院 X 浙江大学学生仪学院</p>
+            </header>
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,7 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, date, time
-
-db = SQLAlchemy()
+from api.extensions import db
+# db = SQLAlchemy()
 
 # Base model with a to_dict method for JSON serialization
 class Base(db.Model):
@@ -32,6 +32,7 @@ class User(Base):
     phone_number = db.Column(db.String(20))
     registration_date = db.Column(db.DateTime, default=datetime.utcnow)
     last_login_date = db.Column(db.DateTime)
+    extubation_status = db.Column(db.String(100), nullable=False, default='未拔管')
 
     recovery_plans = db.relationship('UserRecoveryPlan', backref='user', lazy=True)
     calendar_schedules = db.relationship('CalendarSchedule', backref='user', lazy=True)
@@ -99,6 +100,7 @@ class RecoveryRecordDetail(Base):
     brief_evaluation = db.Column(db.String(50))
     evaluation_details = db.Column(db.Text)
     completion_timestamp = db.Column(db.DateTime)
+    video_path = db.Column(db.String(255))
 
 class MessageChat(Base):
     __tablename__ = 'messages_chat'
@@ -110,6 +112,18 @@ class MessageChat(Base):
     receiver_type = db.Column(db.Enum('user', 'assistant', 'professional'))
     message_text = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'message_id': self.message_id,
+            'conversation_id': self.conversation_id,
+            'sender_id': self.sender_id,
+            'sender_type': self.sender_type,
+            'receiver_id': self.receiver_id,
+            'receiver_type': self.receiver_type,
+            'message_text': self.message_text,
+            'timestamp': self.timestamp.isoformat() if self.timestamp else None
+        }
 
 class VideoSliceImage(Base):
     __tablename__ = 'video_slice_images'
@@ -137,3 +151,25 @@ class QoL(Base):
     level = db.Column(db.String(50), nullable=False) # e.g., 'Excellent', 'Good', 'Fair', 'Poor'
     # Adding a timestamp for when the QoL was recorded might be useful
     submission_timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Nurse(Base):
+    __tablename__ = 'nurses'
+    nurse_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(100), nullable=False)
+    username = db.Column(db.String(100), nullable=False, unique=True)
+    phone_number_suffix = db.Column(db.String(6), nullable=False)
+    registration_date = db.Column(db.DateTime, default=datetime.utcnow)
+
+    evaluations = db.relationship('NurseEvaluation', backref='nurse', lazy=True)
+
+class NurseEvaluation(Base):
+    __tablename__ = 'nurse_evaluations'
+    evaluation_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    record_detail_id = db.Column(db.Integer, db.ForeignKey('recovery_record_details.record_detail_id'), nullable=False)
+    nurse_id = db.Column(db.Integer, db.ForeignKey('nurses.nurse_id'), nullable=False)
+    score = db.Column(db.Integer, nullable=False)
+    feedback_text = db.Column(db.Text)
+    evaluation_timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Optional: Define relationship to RecoveryRecordDetail
+    recovery_record_detail = db.relationship('RecoveryRecordDetail', backref='nurse_evaluations')
