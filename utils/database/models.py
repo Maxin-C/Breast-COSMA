@@ -173,3 +173,12 @@ class NurseEvaluation(Base):
 
     # Optional: Define relationship to RecoveryRecordDetail
     recovery_record_detail = db.relationship('RecoveryRecordDetail', backref='nurse_evaluations')
+
+class ScheduledNotification(Base):
+    __tablename__ = 'scheduled_notifications'
+    notification_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=False)
+    template_id = db.Column(db.String(255), nullable=False)
+    scheduled_time = db.Column(db.DateTime, nullable=False)
+    status = db.Column(db.Enum('pending', 'sent', 'failed'), nullable=False, default='pending')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)

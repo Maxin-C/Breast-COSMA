@@ -136,3 +136,11 @@ class NurseEvaluationForm(FlaskForm):
     score = IntegerField('Score', validators=[DataRequired(), NumberRange(min=0, max=9)])
     feedback_text = TextAreaField('Feedback Text', validators=[Optional()])
     evaluation_timestamp = DateTimeField('Timestamp', format='%Y-%m-%d %H:%M:%S', validators=[Optional()])
+
+class ScheduledNotificationForm(FlaskForm):
+    notification_id = IntegerField('Notification ID', validators=[Optional()])
+    user_id = IntegerField('User ID', validators=[DataRequired()])
+    template_id = StringField('Template ID', validators=[DataRequired(), Length(max=255)])
+    scheduled_time = DateTimeField('Scheduled Time (YYYY-MM-DD HH:MM:SS)', format='%Y-%m-%d %H:%M:%S', validators=[DataRequired()])
+    status = SelectField('Status', choices=[('pending', 'Pending'), ('sent', 'Sent'), ('failed', 'Failed')], validators=[DataRequired()])
+    created_at = DateTimeField('Created At (YYYY-MM-DD HH:MM:SS)', format='%Y-%m-%d %H:%M:%S', validators=[Optional()])

@@ -172,6 +172,16 @@ CREATE TABLE IF NOT EXISTS nurse_evaluations (
     FOREIGN KEY (nurse_id) REFERENCES nurses(nurse_id)
 );
 
+-- 15. scheduled_notifications table
+CREATE TABLE IF NOT EXISTS scheduled_notifications (
+    notification_id INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    template_id VARCHAR(255) NOT NULL,
+    scheduled_time DATETIME NOT NULL,
+    status ENUM('pending', 'sent', 'failed') NOT NULL DEFAULT 'pending',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
 "
 
 # --- Execution ---

@@ -96,97 +96,6 @@ def get_dashboard_stats():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@main_bp.route('/api/cases', methods=['GET'])
-@login_required
-def get_paginated_cases():
-    """为病例列表页提供分页、排序、筛选和检索数据。"""
-    try:
-        # --- 修改开始: 更改默认排序 ---
-        page = request.args.get('page', 1, type=int)
-        per_page = 10
-        sort_by = request.args.get('sort_by', 'user_id') # 默认按序号(user_id)排序
-        sort_order = request.args.get('sort_order', 'asc') # 默认升序
-        # --- 修改结束 ---
-        filter_category = request.args.get('filter_category')
-        filter_result = request.args.get('filter_result')
-        search_name = request.args.get('search_name')
-        search_case_id = request.args.get('search_case_id')
-
-        # --- 子查询部分保持不变 ---
-        session_count_subq = db.session.query(
-            RecoveryRecord.user_id,
-            func.count(RecoveryRecord.record_id).label('session_count')
-        ).group_by(RecoveryRecord.user_id).subquery()
-
-        latest_detail_id_subq = db.session.query(
-            RecoveryRecord.user_id,
-            func.max(RecoveryRecordDetail.record_detail_id).label('max_detail_id')
-        ).join(RecoveryRecordDetail, RecoveryRecord.record_id == RecoveryRecordDetail.record_id)\
-         .group_by(RecoveryRecord.user_id).subquery()
-        
-        # --- 基础查询部分保持不变 ---
-        base_query = db.session.query(
-            User,
-            session_count_subq.c.session_count,
-            RecoveryRecordDetail.brief_evaluation
-        ).outerjoin(
-            session_count_subq, User.user_id == session_count_subq.c.user_id
-        ).outerjoin(
-            latest_detail_id_subq, User.user_id == latest_detail_id_subq.c.user_id
-        ).outerjoin(
-            RecoveryRecordDetail, RecoveryRecordDetail.record_detail_id == latest_detail_id_subq.c.max_detail_id
-        )
-
-        # --- 筛选和检索条件 ---
-        if filter_category:
-            base_query = base_query.filter(User.extubation_status == filter_category)
-        if filter_result:
-            base_query = base_query.filter(RecoveryRecordDetail.brief_evaluation == filter_result)
-        if search_name:
-            base_query = base_query.filter(User.name.like(f"%{search_name}%"))
-        
-        # --- 修改开始: 修复病例号搜索 ---
-        if search_case_id:
-            # 将 srrsh_id 字段显式转换为字符串再进行模糊匹配
-            base_query = base_query.filter(func.cast(User.srrsh_id, db.String).like(f"%{search_case_id}%"))
-        # --- 修改结束 ---
-
-        # --- 排序条件 ---
-        sort_map = {
-            'user_id': User.user_id, # 新增按序号排序
-            'registration_date': User.registration_date,
-            'sessions': session_count_subq.c.session_count
-        }
-        if sort_by in sort_map:
-            sort_column = sort_map[sort_by]
-            if sort_order == 'desc':
-                base_query = base_query.order_by(sort_column.desc())
-            else:
-                base_query = base_query.order_by(sort_column.asc())
-        else:
-            base_query = base_query.order_by(User.user_id.asc()) # 默认按序号升序
-
-        # --- 分页和数据处理部分保持不变 ---
-        paginated_results = base_query.paginate(page=page, per_page=per_page, error_out=False)
-        
-        cases_data = []
-        for user, session_count, brief_evaluation in paginated_results.items:
-            cases_data.append({
-                "id": user.user_id, "name": user.name, "case_id": user.srrsh_id,
-                "reg_date": user.registration_date.strftime('%Y.%m.%d') if user.registration_date else None,
-                "category": user.extubation_status, "sessions": session_count or 0,
-                "result": brief_evaluation or "无评估"
-            })
-
-        return jsonify({
-            "cases": cases_data, "page": paginated_results.page, "total_pages": paginated_results.pages,
-            "has_next": paginated_results.has_next, "has_prev": paginated_results.has_prev
-        })
-
-    except Exception as e:
-        print(f"Error in get_paginated_cases: {e}")
-        return jsonify({"error": str(e)}), 500
-
 @main_bp.route('/api/cases_datatable', methods=['GET'])
 @login_required
 def get_cases_for_datatable():
@@ -206,8 +115,14 @@ def get_cases_for_datatable():
         # 2. 构建子查询 (与之前版本相同)
         session_count_subq = db.session.query(
             RecoveryRecord.user_id,
-            func.count(RecoveryRecord.record_id).label('session_count')
-        ).group_by(RecoveryRecord.user_id).subquery()
+            func.count(RecoveryRecord.record_id.distinct()).label('session_count')
+        ).join(
+            RecoveryRecordDetail, RecoveryRecord.record_id == RecoveryRecordDetail.record_id
+        ).filter(
+            RecoveryRecordDetail.video_path != None
+        ).group_by(
+            RecoveryRecord.user_id
+        ).subquery()
 
         # 3. 构建基础查询
         base_query = db.session.query(

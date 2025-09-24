@@ -6,7 +6,7 @@ import numpy as np
 import cv2
 from datetime import datetime
 
-from flask import Blueprint, request, jsonify, current_app, send_from_directory
+from flask import Blueprint, request, jsonify, current_app, send_from_directory, session
 from werkzeug.utils import secure_filename
 
 from api.extensions import db
@@ -20,7 +20,7 @@ mmpose_config_path="utils/pose_estimation/mmpose_config.json"
 mmpose_config = SimpleNamespace(**json.load(open(mmpose_config_path,'r')))
 detector_device = "cuda:0"
 try:
-    detector = UpperBodyDetector(mmpose_config.pose2d_config, mmpose_config.pose2d_checkpoint, device=detector_device)
+    detector = UpperBodyDetector(mmpose_config.pose2d_config, mmpose_config.pose2d_checkpoint, device=detector_device, margin_ratio=0.05)
 except Exception as e:
     print(f"Failed to initialize UpperBodyDetector: {e}")
     detector = None
@@ -152,6 +152,10 @@ def _extract_frames_from_sprite(image_path):
 
 @media_bp.route('/api/process_exercise_video', methods=['POST'])
 def process_exercise_video():
+    """
+    根据 record_id 和 exercise_id 拼接雪碧图为完整视频，
+    并创建/更新 recovery_record_details 记录。
+    """
     data = request.json
     record_id = data.get('record_id')
     exercise_id = data.get('exercise_id')
@@ -160,6 +164,7 @@ def process_exercise_video():
         return jsonify({"error": "record_id 和 exercise_id 是必需的"}), 400
 
     try:
+        # 1. 创建一个新的 recovery_record_details 条目
         new_detail = RecoveryRecordDetail(
             record_id=record_id,
             exercise_id=exercise_id,
@@ -168,16 +173,20 @@ def process_exercise_video():
         db.session.add(new_detail)
         db.session.commit()
 
+        # --- 修改开始 ---
+        # 2. 从 video_slice_images 查找所有相关雪碧图，并按 时间戳 和 顺序号 双重排序
         image_slices = VideoSliceImage.query.filter_by(
             record_id=record_id,
             exercise_id=exercise_id
-        ).order_by(VideoSliceImage.slice_order).all()
+        ).order_by(VideoSliceImage.timestamp, VideoSliceImage.slice_order).all()
+        # --- 修改结束 ---
 
         if not image_slices:
             new_detail.evaluation_details = "错误：未找到对应的视频切片图像。"
             db.session.commit()
             return jsonify({"error": "未找到与此记录相关的视频切片图像"}), 404
 
+        # 3. 提取所有视频帧
         all_frames = []
         for image_slice in image_slices:
             frames = _extract_frames_from_sprite(image_slice.image_path)
@@ -188,29 +197,27 @@ def process_exercise_video():
             db.session.commit()
             return jsonify({"error": "无法从雪碧图中提取视频帧"}), 500
 
+        # 4. 将所有帧拼接成一个视频 (此部分逻辑不变)
         frame_height, frame_width, _ = all_frames[0].shape
         video_filename = f"record_{record_id}_exercise_{exercise_id}_{int(time.time())}.mp4"
-        
-        video_folder_abs = os.path.join(current_app.root_path, '..', VIDEO_FOLDER)
-        video_filepath_abs = os.path.join(video_folder_abs, video_filename)
+        video_filepath = os.path.join(VIDEO_FOLDER, video_filename)
         
         fps = 6.0
         fourcc = cv2.VideoWriter_fourcc(*'avc1')
-        video_writer = cv2.VideoWriter(video_filepath_abs, fourcc, fps, (frame_width, frame_height))
+        video_writer = cv2.VideoWriter(video_filepath, fourcc, fps, (frame_width, frame_height))
         
         for frame in all_frames:
             video_writer.write(frame)
         video_writer.release()
 
-        # Save relative path to DB
-        video_filepath_db = os.path.join(VIDEO_FOLDER, video_filename)
-        new_detail.video_path = video_filepath_db
+        # 5. 更新 recovery_record_details 条目，保存视频路径 (此部分逻辑不变)
+        new_detail.video_path = video_filepath
         db.session.commit()
 
         return jsonify({
             "message": "视频处理成功并已保存",
             "record_detail_id": new_detail.record_detail_id,
-            "video_path": video_filepath_db
+            "video_path": video_filepath
         }), 201
 
     except Exception as e:

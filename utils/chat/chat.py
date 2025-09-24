@@ -3,6 +3,9 @@ from openai import OpenAI
 from typing import List, Dict, Optional
 from datetime import datetime
 import uuid
+# class ChatService:
+#     def __init__(self):
+#         pass
 from ..database.models import db, MessageChat, User, RecoveryPlan, Exercise, CalendarSchedule, RecoveryRecord, UserRecoveryPlan
 from ..database import database as db_operations
 

@@ -14,6 +14,8 @@ from utils.database.forms import (
     MessageChatForm, VideoSliceImageForm, FormForm, QoLForm,
     NurseForm, NurseEvaluationForm
 )
+import requests
+from flask import current_app
 
 crud_bp = Blueprint('crud', __name__)
 
@@ -64,6 +66,61 @@ def search_users():
         return jsonify([user.to_dict() for user in users])
     else:
         return jsonify({"message": f"No users found with {field_name} = {field_value}"}), 404
+
+@crud_bp.route('/users/update_openid', methods=['POST'])
+def update_user_openid():
+    """
+    接收小程序的 code，换取 openid 并更新到用户数据库。
+    """
+    data = request.json
+    user_id = data.get('user_id')
+    code = data.get('code')
+
+    if not user_id or not code:
+        return jsonify({"error": "缺少 user_id 或 code"}), 400
+
+    # 从应用配置中获取小程序的 appid 和 secret
+    appid = current_app.config.get('WECHAT_APPID')
+    secret = current_app.config.get('WECHAT_APPSECRET')
+
+    if not appid or not secret:
+        print("错误: WECHAT_APPID 或 WECHAT_APPSECRET 未在后端配置。")
+        return jsonify({"error": "服务器配置错误"}), 500
+
+    # 构造请求微信服务器的 URL
+    url = f"https://api.weixin.qq.com/sns/jscode2session?appid={appid}&secret={secret}&js_code={code}&grant_type=authorization_code"
+
+    try:
+        # 发起请求
+        response = requests.get(url)
+        response.raise_for_status()  # 如果请求失败 (例如 4xx, 5xx), 则抛出异常
+        wechat_data = response.json()
+
+        openid = wechat_data.get('openid')
+        if not openid:
+            # 如果微信返回的数据中没有 openid，则返回错误
+            print(f"从微信获取 openid 失败: {wechat_data}")
+            return jsonify({"error": "无法从微信获取用户信息", "details": wechat_data}), 502 # 502 Bad Gateway
+
+        # 从数据库中查找用户
+        user = db_operations.get_record_by_id(User, user_id)
+        if not user:
+            return jsonify({"error": "指定的用户不存在"}), 404
+
+        # 更新用户的 openid 并保存
+        user.wechat_openid = openid
+        db.session.commit()
+
+        print(f"成功为用户 {user_id} 更新 OpenID。")
+        return jsonify({"message": "用户信息同步成功"}), 200
+
+    except requests.RequestException as e:
+        print(f"请求微信服务器时发生网络错误: {e}")
+        return jsonify({"error": "无法连接微信服务器"}), 503 # 503 Service Unavailable
+    except Exception as e:
+        db.session.rollback()
+        print(f"更新 OpenID 时发生未知错误: {e}")
+        return jsonify({"error": "服务器内部错误"}), 500
 
 @crud_bp.route('/users', methods=['POST'])
 def add_user():
