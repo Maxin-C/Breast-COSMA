@@ -11,13 +11,81 @@ from utils.database.models import (
 from utils.database.forms import (
     UserForm, RecoveryPlanForm, ExerciseForm, UserRecoveryPlanForm,
     CalendarScheduleForm, RecoveryRecordForm, RecoveryRecordDetailForm,
-    MessageChatForm, VideoSliceImageForm, FormForm, QoLForm,
-    NurseForm, NurseEvaluationForm
+    MessageChatForm, VideoSliceImageForm, FormForm, QoLForm
 )
-import requests
-from flask import current_app
+from utils.database import database as db_operations
+from utils.detect_upper_body.main import UpperBodyDetector
 
-crud_bp = Blueprint('crud', __name__)
+from flask_compress import Compress
+from flask_wtf.csrf import CSRFProtect
+import secrets
+import os
+from types import SimpleNamespace
+import json
+import numpy as np
+import cv2
+
+app = Flask(__name__)
+Compress(app)
+app.config.from_object(Config)
+# app.config['SECRET_KEY'] = secrets.token_hex(16)
+# app.config['SECRET_KEY'] = "test"
+# csrf = CSRFProtect(app)
+app.config['WTF_CSRF_ENABLED'] = False
+db.init_app(app)
+
+#--------------------------------------------------
+# upper body detector
+mmpose_config_path="utils/pose_estimation/mmpose_config.json"
+mmpose_config = SimpleNamespace(**json.load(open(mmpose_config_path,'r')))
+detector_device = "cuda:0"
+try:
+    detector = UpperBodyDetector(mmpose_config.pose2d_config, mmpose_config.pose2d_checkpoint, confidence_threshold=0.5, device=detector_device)
+except Exception as e:
+    print(f"Flask 应用启动失败：无法初始化 UpperBodyDetector。错误：{e}")
+    exit(1)
+
+@app.route('/detect_upper_body', methods=['POST'])
+def detect_upper_body():
+    if 'image' not in request.files:
+        return jsonify({"error": "No image file provided. Please upload an image with key 'image'."}), 400
+
+    file = request.files['image']
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+
+    if file:
+        try:
+            nparr = np.frombuffer(file.read(), np.uint8)
+            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+            if img is None:
+                return jsonify({"error": "Could not decode image. Please ensure it's a valid image format."}), 400
+
+            response_data = {"is_upper_body_in_frame": detector.detect(img)}
+            return jsonify(response_data), 200
+
+        except Exception as e:
+            print(f"Error during detection: {e}")
+            return jsonify({"error": f"Internal server error: {str(e)}"}), 500
+
+
+# --------------------------------------------------
+# video
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+STATIC_FOLDER = os.path.join(BASE_DIR, 'static')
+
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    # send_from_directory 会自动处理文件类型和 Content-Disposition
+    return send_from_directory(STATIC_FOLDER, filename)
+
+# --------------------------------------------------
+# dataset
+
+# Create database tables if they don't exist (run once)
+with app.app_context():
+    db.create_all()
 
 @crud_bp.route('/')
 def index():
