@@ -6,4 +6,5 @@ uploads
 *.env
 *.sql
 *.log
+*.db
 static
