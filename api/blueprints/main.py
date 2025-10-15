@@ -39,9 +39,9 @@ def get_dashboard_stats():
         # 2. 评估结果
         eval_res = db.session.query(
             case(
-                (RecoveryRecordDetail.brief_evaluation == None, '未评估'),
-                (RecoveryRecordDetail.brief_evaluation == '', '未评估'),
-                else_=RecoveryRecordDetail.brief_evaluation
+                (RecoveryRecordDetail.evaluation_details == None, '未评估'),
+                (RecoveryRecordDetail.evaluation_details == '', '未评估'),
+                else_='已评估'
             ).label('evaluation_category'),
             func.count(RecoveryRecordDetail.record_detail_id)
         ).group_by('evaluation_category').all()

@@ -2,7 +2,9 @@ from flask import Flask
 from config import Config
 from .extensions import db, compress, csrf, scheduler
 import os
-from utils.chat.chat import ChatService
+
+from utils.llm_service.consult import Consult
+from utils.llm_service.report import ReportGenerator 
 from apscheduler.schedulers.background import BackgroundScheduler
 from api.services.wechat import send_scheduled_notifications
 
@@ -42,10 +44,12 @@ def create_app(config_class=Config):
         print("Scheduler has been started.")
 
     with app.app_context():
-        app.chat_service = ChatService()
+        # app.consult_service = Consult()
+        app.consult_service = None
+        app.report_service = ReportGenerator(db_session=db.session)
 
-        upload_folder = os.path.join(app.root_path, '..', 'uploads')
-        video_folder = os.path.join(upload_folder, 'video')
+        upload_folder = os.getenv("SLICE_SAVE_PATH", "uploads/slices")
+        video_folder = os.getenv("VIDEO_SAVE_PATH", "uploads/videos")
 
         if not os.path.exists(upload_folder):
             os.makedirs(upload_folder)
@@ -57,15 +61,15 @@ def create_app(config_class=Config):
     # Import and register blueprints
     from .blueprints.auth import auth_bp
     from .blueprints.main import main_bp
-    from .blueprints.media import media_bp
-    from .blueprints.chat import chat_bp
+    from .blueprints.report import report_bp
+    from .blueprints.consult import consult_bp
     from .blueprints.crud import crud_bp
     from .blueprints.messaging import messaging_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
-    app.register_blueprint(media_bp)
-    app.register_blueprint(chat_bp)
+    app.register_blueprint(report_bp)
+    app.register_blueprint(consult_bp)
     app.register_blueprint(crud_bp)
     app.register_blueprint(messaging_bp)
 

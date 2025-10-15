@@ -87,7 +87,6 @@ CREATE TABLE IF NOT EXISTS recovery_record_details (
     exercise_id INT, -- 外键，关联到 exercises 表
     actual_duration_minutes INT, -- 实际锻炼时长
     actual_repetitions_completed INT, -- 实际完成重复次数
-    brief_evaluation VARCHAR(50),
     evaluation_details TEXT,
     completion_timestamp DATETIME, -- 该次具体运动完成的时间戳
     video_path VARCHAR(255),
@@ -95,20 +94,16 @@ CREATE TABLE IF NOT EXISTS recovery_record_details (
     FOREIGN KEY (exercise_id) REFERENCES exercises(exercise_id)
 );
 
--- 8. Create the 'messages_chat' table
-CREATE TABLE IF NOT EXISTS messages_chat (
+-- 8. Create the 'chat_history' table
+CREATE TABLE IF NOT EXISTS chat_history (
     message_id INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
-    conversation_id VARCHAR(255), -- 新增字段，用于标识一个完整的对话会话
+    conversation_id VARCHAR(255),
+    user_id INT,
     is_follow_up BOOLEAN,
-    sender_id INT, -- 发送者ID (可以是 user_id 或 assistant_id)
-    sender_type ENUM('user', 'assistant', 'professional'), -- 新增字段，发送者类型
-    receiver_id INT, -- 接收者ID (可以是 user_id 或 assistant_id)
-    receiver_type ENUM('user', 'assistant', 'professional'), -- 新增字段，接收者类型
-    message_text TEXT,
+    chat_history JSON,
     timestamp DATETIME,
-    INDEX (conversation_id), -- 为对话ID添加索引，便于查询
-    INDEX (sender_id, sender_type), -- 为发送者添加索引
-    INDEX (receiver_id, receiver_type) -- 为接收者添加索引
+    INDEX (conversation_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
 -- 9. Create the 'video_slice_images' table

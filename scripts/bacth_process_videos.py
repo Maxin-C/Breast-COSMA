@@ -24,7 +24,7 @@ db.init_app(app)
 
 
 # --- Configuration ---
-VIDEO_FOLDER = 'uploads/video'
+VIDEO_FOLDER = 'uploads/videos'
 
 # --- Helper Function ---
 def _extract_frames_from_sprite(image_path):

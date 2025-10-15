@@ -86,6 +86,7 @@ class RecoveryRecord(Base):
     user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'))
     record_date = db.Column(db.DateTime, default=datetime.utcnow)
     notes = db.Column(db.Text)
+    evaluation_summary = db.Column(db.Text)
 
     record_details = db.relationship('RecoveryRecordDetail', backref='recovery_record', lazy=True)
     video_slice_images = db.relationship('VideoSliceImage', backref='recovery_record', lazy=True)
@@ -97,33 +98,60 @@ class RecoveryRecordDetail(Base):
     exercise_id = db.Column(db.Integer, db.ForeignKey('exercises.exercise_id'))
     actual_duration_minutes = db.Column(db.Integer)
     actual_repetitions_completed = db.Column(db.Integer)
-    brief_evaluation = db.Column(db.String(50))
     evaluation_details = db.Column(db.Text)
     completion_timestamp = db.Column(db.DateTime)
     video_path = db.Column(db.String(255))
 
-class MessageChat(Base):
-    __tablename__ = 'messages_chat'
+# class MessageChat(Base):
+#     __tablename__ = 'messages_chat'
+#     message_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+#     conversation_id = db.Column(db.String(255))
+#     sender_id = db.Column(db.Integer)
+#     sender_type = db.Column(db.Enum('user', 'assistant', 'professional'))
+#     receiver_id = db.Column(db.Integer)
+#     receiver_type = db.Column(db.Enum('user', 'assistant', 'professional'))
+#     message_text = db.Column(db.Text)
+#     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+#     def to_dict(self):
+#         return {
+#             'message_id': self.message_id,
+#             'conversation_id': self.conversation_id,
+#             'sender_id': self.sender_id,
+#             'sender_type': self.sender_type,
+#             'receiver_id': self.receiver_id,
+#             'receiver_type': self.receiver_type,
+#             'message_text': self.message_text,
+#             'timestamp': self.timestamp.isoformat() if self.timestamp else None
+#         }
+
+class ChatHistory(db.Model):
+    __tablename__ = 'chat_history'
+
     message_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    conversation_id = db.Column(db.String(255))
-    sender_id = db.Column(db.Integer)
-    sender_type = db.Column(db.Enum('user', 'assistant', 'professional'))
-    receiver_id = db.Column(db.Integer)
-    receiver_type = db.Column(db.Enum('user', 'assistant', 'professional'))
-    message_text = db.Column(db.Text)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    conversation_id = db.Column(db.String(255), index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=False)
+    is_follow_up = db.Column(db.Boolean, default=False)
+    chat_history = db.Column(db.JSON)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    summary = db.Column(db.Text, nullable=True)
+
+    user = db.relationship('User', backref=db.backref('chat_histories', lazy=True))
 
     def to_dict(self):
         return {
             'message_id': self.message_id,
             'conversation_id': self.conversation_id,
-            'sender_id': self.sender_id,
-            'sender_type': self.sender_type,
-            'receiver_id': self.receiver_id,
-            'receiver_type': self.receiver_type,
-            'message_text': self.message_text,
-            'timestamp': self.timestamp.isoformat() if self.timestamp else None
+            'user_id': self.user_id,
+            'is_follow_up': self.is_follow_up,
+            'chat_history': self.chat_history,
+            'timestamp': self.timestamp.isoformat() if self.timestamp else None,
+            'summary': self.summary
         }
+
+    def __repr__(self):
+        return f"<ChatHistory conversation_id='{self.conversation_id}' user_id={self.user_id}>"
+
 
 class VideoSliceImage(Base):
     __tablename__ = 'video_slice_images'

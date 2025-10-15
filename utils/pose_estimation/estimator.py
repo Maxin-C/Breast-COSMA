@@ -130,7 +130,7 @@ class CLIPTextTransformerCustom(nn.Module):
             encoder_attention_mask_4d = _prepare_4d_attention_mask(final_attention_mask, inputs_embeds.dtype, tgt_len=current_sequence_length)
         causal_input_shape = (effective_batch_size, current_sequence_length)
         causal_attention_mask_4d = _create_4d_causal_attention_mask(causal_input_shape, inputs_embeds.dtype, device=inputs_embeds.device)
-        encoder_outputs = self.encoder(inputs_embeds=inputs_embeds, attention_mask=encoder_attention_mask_4d, causal_attention_mask=causal_attention_mask_4d, output_attentions=output_attentions, output_hidden_states=output_hidden_states, return_dict=return_dict)
+        encoder_outputs = self.encoder(inputs_embeds=inputs_embeds, attention_mask=encoder_attention_mask_4d, causal_attention_mask=causal_attention_mask_4d, output_attentions=output_attentions, output_hidden_states=output_hidden_states)
         last_hidden_state = encoder_outputs[0] if not return_dict else encoder_outputs.last_hidden_state
         last_hidden_state = self.final_layer_norm(last_hidden_state)
         if self.eos_token_id is not None:
@@ -222,7 +222,7 @@ class ClipSeq(nn.Module):
         global_motion_prompt_for_text = self.motion_adapter(motion_features.mean(dim=1, keepdim=True))
         target_input_ids = texts_desc_inputs.input_ids[target_class_ids].to(device)
         target_attention_mask = texts_desc_inputs.attention_mask[target_class_ids].to(device)
-        text_encoder_output_pooled_target = self.text_encoder_cus(input_ids=target_input_ids, attention_mask=target_attention_mask, motion_prompt=global_motion_prompt_for_text).pooler_output
+        text_encoder_output_pooled_target = self.text_encoder_cus(input_ids=target_input_ids, attention_mask=target_attention_mask,motion_prompt=global_motion_prompt_for_text).pooler_output
         projected_text_features_target = self.text_projection(text_encoder_output_pooled_target)
         normalized_text_features_target = projected_text_features_target / projected_text_features_target.norm(p=2, dim=-1, keepdim=True)
         T_target = normalized_text_features_target.unsqueeze(1)
@@ -389,15 +389,13 @@ if __name__ == '__main__':
     }
 
     classifier_service = Estimator(config)
-
-    sample_sprite_path = "/root/codes/Breast-COMA-Rehab/uploads/1_1754557667279_sprite_sheet.png"
+    sample_sprite_path = "/var/codes/Breast-COMA-Rehab/uploads/slices/1_1755648889472_sprite_sheet.png"
     
-    target_class_id = 2
+    target_class_id = 1
     sample_sprite_image = Image.open(sample_sprite_path)
     results = classifier_service.predict(sample_sprite_image, target_class_id)
 
     for i, res in enumerate(results):
         status = "属于" if res == 1 else "不属于"
         print(f"Frame {i+1}: {status} '{target_class_id}'")
-    
     print(f"\nRaw output array: {results}")

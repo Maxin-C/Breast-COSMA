@@ -1,3 +1,7 @@
+import os
+import json
+import numpy as np
+import cv2
 from flask import Blueprint, jsonify, request
 from datetime import datetime
 
@@ -5,87 +9,17 @@ from api.extensions import db
 from utils.database import database as db_operations
 from utils.database.models import (
     User, RecoveryPlan, Exercise, UserRecoveryPlan, CalendarSchedule, 
-    RecoveryRecord, RecoveryRecordDetail, MessageChat, VideoSliceImage, 
+    RecoveryRecord, RecoveryRecordDetail, ChatHistory, VideoSliceImage, 
     Form, QoL, Nurse, NurseEvaluation
 )
 from utils.database.forms import (
     UserForm, RecoveryPlanForm, ExerciseForm, UserRecoveryPlanForm,
     CalendarScheduleForm, RecoveryRecordForm, RecoveryRecordDetailForm,
-    MessageChatForm, VideoSliceImageForm, FormForm, QoLForm
+    ChatHistoryForm, VideoSliceImageForm, FormForm, QoLForm
 )
 from utils.database import database as db_operations
-from utils.detect_upper_body.main import UpperBodyDetector
 
-from flask_compress import Compress
-from flask_wtf.csrf import CSRFProtect
-import secrets
-import os
-from types import SimpleNamespace
-import json
-import numpy as np
-import cv2
-
-app = Flask(__name__)
-Compress(app)
-app.config.from_object(Config)
-# app.config['SECRET_KEY'] = secrets.token_hex(16)
-# app.config['SECRET_KEY'] = "test"
-# csrf = CSRFProtect(app)
-app.config['WTF_CSRF_ENABLED'] = False
-db.init_app(app)
-
-#--------------------------------------------------
-# upper body detector
-mmpose_config_path="utils/pose_estimation/mmpose_config.json"
-mmpose_config = SimpleNamespace(**json.load(open(mmpose_config_path,'r')))
-detector_device = "cuda:0"
-try:
-    detector = UpperBodyDetector(mmpose_config.pose2d_config, mmpose_config.pose2d_checkpoint, confidence_threshold=0.5, device=detector_device)
-except Exception as e:
-    print(f"Flask 应用启动失败：无法初始化 UpperBodyDetector。错误：{e}")
-    exit(1)
-
-@app.route('/detect_upper_body', methods=['POST'])
-def detect_upper_body():
-    if 'image' not in request.files:
-        return jsonify({"error": "No image file provided. Please upload an image with key 'image'."}), 400
-
-    file = request.files['image']
-    if file.filename == '':
-        return jsonify({"error": "No selected file"}), 400
-
-    if file:
-        try:
-            nparr = np.frombuffer(file.read(), np.uint8)
-            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-
-            if img is None:
-                return jsonify({"error": "Could not decode image. Please ensure it's a valid image format."}), 400
-
-            response_data = {"is_upper_body_in_frame": detector.detect(img)}
-            return jsonify(response_data), 200
-
-        except Exception as e:
-            print(f"Error during detection: {e}")
-            return jsonify({"error": f"Internal server error: {str(e)}"}), 500
-
-
-# --------------------------------------------------
-# video
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-STATIC_FOLDER = os.path.join(BASE_DIR, 'static')
-
-@app.route('/static/<path:filename>')
-def serve_static(filename):
-    # send_from_directory 会自动处理文件类型和 Content-Disposition
-    return send_from_directory(STATIC_FOLDER, filename)
-
-# --------------------------------------------------
-# dataset
-
-# Create database tables if they don't exist (run once)
-with app.app_context():
-    db.create_all()
+crud_bp = Blueprint('crud', __name__)
 
 @crud_bp.route('/')
 def index():
@@ -796,96 +730,165 @@ def delete_recovery_record_detail(record_detail_id):
     else:
         return jsonify({"message": "Error deleting Recovery Record Detail."}), 500
 
-# --- CRUD Operations for Message Chats ---
-@crud_bp.route('/messages_chat', methods=['GET'])
-def list_messages_chat():
-    messages = db_operations.get_all_records(MessageChat)
-    return jsonify([message.to_dict() for message in messages])
+# --- CRUD Operations for Chat History ---
 
-@crud_bp.route('/messages_chat/<int:message_id>', methods=['GET'])
-def get_message_chat(message_id):
-    message = db_operations.get_record_by_id(MessageChat, message_id)
-    if not message:
-        return jsonify({"message": "Message Chat not found."}), 404
-    return jsonify(message.to_dict())
+@crud_bp.route('/chat_history', methods=['GET'])
+def list_chat_histories():
+    """Lists all conversation histories."""
+    histories = db_operations.get_all_records(ChatHistory)
+    return jsonify([history.to_dict() for history in histories])
 
-# 新增：根据字段查询消息聊天
-@crud_bp.route('/messages_chat/search', methods=['GET'])
-def search_messages_chat():
+@crud_bp.route('/chat_history/<int:chat_id>', methods=['GET'])
+def get_chat_history(chat_id):
+    """Gets a specific conversation history by its primary key."""
+    history = db_operations.get_record_by_id(ChatHistory, chat_id)
+    if not history:
+        return jsonify({"message": "Chat history not found."}), 404
+    return jsonify(history.to_dict())
+
+@crud_bp.route('/chat_history/search', methods=['GET'])
+def search_chat_histories():
+    """Searches for conversation histories by a specific field."""
+    # This function remains largely the same, just uses the new model
     field_name = request.args.get('field')
     field_value = request.args.get('value')
 
     if not field_name or not field_value:
         return jsonify({"message": "Missing 'field' or 'value' query parameters."}), 400
 
+    # Basic type casting for search
     try:
-        if field_name.endswith('_id'):
+        if field_name in ['user_id', 'message_id']:
             field_value = int(field_value)
-        elif field_name == 'timestamp':
-            field_value = datetime.strptime(field_value, '%Y-%m-%d %H:%M:%S')
     except ValueError:
-        pass
+        return jsonify({"message": f"Invalid value for field '{field_name}'."}), 400
 
-    messages = db_operations.get_records_by_field(MessageChat, field_name, field_value)
-    if messages:
-        return jsonify([message.to_dict() for message in messages])
+    histories = db_operations.get_records_by_field(ChatHistory, field_name, field_value)
+    if histories:
+        return jsonify([history.to_dict() for history in histories])
     else:
-        return jsonify({"message": f"No message chats found with {field_name} = {field_value}"}), 404
+        return jsonify({"message": f"No chat histories found with {field_name} = {field_value}"}), 404
 
+@crud_bp.route('/chat_history', methods=['POST'])
+def add_message_to_history():
+    """
+    Adds a new message. Creates a new history if conversation_id is new,
+    or appends to an existing one.
+    """
+    form = ChatHistoryForm(data=request.json)
+    if not form.validate():
+        return jsonify({"message": "Validation failed", "errors": form.errors}), 400
 
-@crud_bp.route('/messages_chat', methods=['POST'])
-def add_message_chat():
-    form = MessageChatForm(request.form)
-    if not form.validate_on_submit() and request.json:
-        form = MessageChatForm(data=request.json)
-        if not form.validate():
-            return jsonify({"message": "Validation failed", "errors": form.errors}), 400
+    # Find if a conversation with this ID already exists
+    existing_history = db_operations.get_records_by_field(
+        ChatHistory, 'conversation_id', form.conversation_id.data
+    )
 
-    if form.validate_on_submit() or form.validate():
-        data = {field.name: field.data for field in form if field.name != 'csrf_token'}
-        # message_id is autoincrement, so it's Optional for add. No need to pop if not present
-        # data.pop('message_id', None)
+    if existing_history:
+        # --- Append to existing conversation ---
+        record = existing_history[0]
+        new_message = {'role': 'user', 'content': form.new_message_text.data}
 
-        new_record = db_operations.add_record(MessageChat, data)
+        # SQLAlchemy's JSON type tracks changes, but it's safer to re-assign
+        current_history = record.chat_history or []
+        current_history.append(new_message)
+        
+        updated_data = {
+            'chat_history': current_history,
+            'is_follow_up': form.is_follow_up.data
+        }
+
+        updated_record = db_operations.update_record(record, updated_data)
+        return jsonify({
+            "message": "Message appended to existing chat history!",
+            "chat": updated_record.to_dict()
+        }), 200
+
+    else:
+        # --- Create new conversation history ---
+        initial_history = [{'role': 'user', 'content': form.new_message_text.data}]
+        
+        data = {
+            'conversation_id': form.conversation_id.data,
+            'user_id': form.user_id.data,
+            'is_follow_up': form.is_follow_up.data,
+            'chat_history': initial_history
+        }
+
+        new_record = db_operations.add_record(ChatHistory, data)
         if new_record:
-            return jsonify({"message": "Message Chat added successfully!", "chat": new_record.to_dict()}), 201
+            return jsonify({
+                "message": "New chat history created successfully!",
+                "chat": new_record.to_dict()
+            }), 201
         else:
-            return jsonify({"message": "Error adding Message Chat."}), 500
-    return jsonify({"message": "Validation failed", "errors": form.errors}), 400
+            return jsonify({"message": "Error creating chat history."}), 500
 
-@crud_bp.route('/messages_chat/<int:message_id>', methods=['PUT'])
-def edit_message_chat(message_id):
-    record = db_operations.get_record_by_id(MessageChat, message_id)
+
+@crud_bp.route('/chat_history/<int:chat_id>', methods=['PUT'])
+def edit_chat_history_metadata(chat_id):
+    """Updates metadata of a chat history (e.g., is_follow_up)."""
+    record = db_operations.get_record_by_id(ChatHistory, chat_id)
     if not record:
-        return jsonify({"message": "Message Chat not found."}), 404
+        return jsonify({"message": "Chat history not found."}), 404
 
-    form = MessageChatForm(request.form, obj=record)
-    if not form.validate_on_submit() and request.json:
-        form = MessageChatForm(data=request.json, obj=record)
-        if not form.validate():
-            return jsonify({"message": "Validation failed", "errors": form.errors}), 400
+    # Assumes a simpler form for metadata updates, like ChatHistoryMetadataForm
+    data = request.json
+    if 'is_follow_up' not in data:
+         return jsonify({"message": "Validation failed", "errors": "is_follow_up is required"}), 400
 
-    if form.validate_on_submit() or form.validate():
-        data = {field.name: field.data for field in form if field.name != 'csrf_token'}
-        data.pop('message_id', None)
+    update_data = {'is_follow_up': bool(data['is_follow_up'])}
+    
+    updated_record = db_operations.update_record(record, update_data)
+    if updated_record:
+        return jsonify({
+            "message": "Chat history metadata updated successfully!",
+            "chat": updated_record.to_dict()
+        })
+    else:
+        return jsonify({"message": "Error updating chat history metadata."}), 500
 
-        updated_record = db_operations.update_record(record, data)
-        if updated_record:
-            return jsonify({"message": "Message Chat updated successfully!", "chat": updated_record.to_dict()})
-        else:
-            return jsonify({"message": "Error updating Message Chat."}), 500
-    return jsonify({"message": "Validation failed", "errors": form.errors}), 400
 
-@crud_bp.route('/messages_chat/<int:message_id>', methods=['DELETE'])
-def delete_message_chat(message_id):
-    record = db_operations.get_record_by_id(MessageChat, message_id)
+@crud_bp.route('/chat_history/<int:chat_id>', methods=['DELETE'])
+def delete_chat_history(chat_id):
+    """Deletes an entire conversation history."""
+    record = db_operations.get_record_by_id(ChatHistory, chat_id)
     if not record:
-        return jsonify({"message": "Message Chat not found."}), 404
+        return jsonify({"message": "Chat history not found."}), 404
 
     if db_operations.delete_record(record):
-        return jsonify({"message": "Message Chat deleted successfully!"})
+        return jsonify({"message": "Chat history deleted successfully!"})
     else:
-        return jsonify({"message": "Error deleting Message Chat."}), 500
+        return jsonify({"message": "Error deleting chat history."}), 500
+
+@crud_bp.route('/chat_history/<string:conversation_id>/summarize', methods=['POST'])
+def summarize_chat_history(conversation_id):
+    """
+    为指定的对话生成摘要并保存到数据库。
+    """
+    # 查找对话记录
+    record = db.session.query(ChatHistory).filter(ChatHistory.conversation_id == conversation_id).first()
+    if not record:
+        return jsonify({"message": "Chat history not found."}), 404
+
+    try:
+        consult_service = Consult()
+        summary_text = consult_service.summarize_conversation(conversation_id)
+        
+        if summary_text:
+            update_data = {'summary': summary_text}
+            updated_record = db_operations.update_record(record, update_data)
+            
+            return jsonify({
+                "message": "Summary generated and saved successfully!",
+                "summary": updated_record.summary
+            }), 200
+        else:
+            return jsonify({"message": "Failed to generate summary."}), 500
+
+    except Exception as e:
+        print(f"Error during summarization: {e}")
+        return jsonify({"message": "An error occurred while generating the summary."}), 500
 
 # --- CRUD Operations for Video Slice Images ---
 @crud_bp.route('/video_slice_images', methods=['GET'])

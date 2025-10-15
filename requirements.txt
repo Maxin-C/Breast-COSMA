@@ -192,4 +192,4 @@ PyMySQL
 gunicorn
 flask_compress
 openai
-flask_compress
+faiss-cpu
