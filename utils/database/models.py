@@ -31,7 +31,7 @@ class User(Base):
     name = db.Column(db.String(100))
     phone_number = db.Column(db.String(20))
     registration_date = db.Column(db.DateTime, default=datetime.utcnow)
-    last_login_date = db.Column(db.DateTime)
+    surgery_date = db.Column(db.DateTime)
     extubation_status = db.Column(db.String(100), nullable=False, default='未拔管')
 
     recovery_plans = db.relationship('UserRecoveryPlan', backref='user', lazy=True)
@@ -163,23 +163,15 @@ class VideoSliceImage(Base):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     is_part_of_action = db.Column(db.Boolean, default=False)
 
-class Form(Base):
-    __tablename__ = 'forms'
-    form_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    form_name = db.Column(db.String(255), nullable=False)
-    form_content = db.Column(db.Text, nullable=False) # Store form structure/questions (e.g., JSON string)
-
-    qol_records = db.relationship('QoL', backref='form', lazy=True)
-
 class QoL(Base):
-    __tablename__ = 'qol_records' # Changed to qol_records for better clarity
+    __tablename__ = 'qol_records'
     qol_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    form_id = db.Column(db.Integer, db.ForeignKey('forms.form_id'), nullable=False)
+    form_name = db.Column(db.String(20), nullable=False)
+    result = db.Column(db.JSON, nullable=False)  # JSON 类型字段
+    submission_time = db.Column(db.DateTime, nullable=False, default=db.func.current_timestamp())
     user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=False)
-    score = db.Column(db.Integer, nullable=False)
-    level = db.Column(db.String(50), nullable=False) # e.g., 'Excellent', 'Good', 'Fair', 'Poor'
-    # Adding a timestamp for when the QoL was recorded might be useful
-    submission_timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    user = db.relationship('User', backref=db.backref('qol_records', lazy=True))
 
 class Nurse(Base):
     __tablename__ = 'nurses'

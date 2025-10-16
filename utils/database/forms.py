@@ -38,7 +38,7 @@ class UserForm(FlaskForm):
     phone_number = StringField('Phone Number', validators=[Optional(), Length(max=20)])
     # For DateTimeField, ensure the format matches what you expect from input
     registration_date = DateTimeField('Registration Date (YYYY-MM-DD HH:MM:SS)', format='%Y-%m-%d %H:%M:%S', validators=[Optional()])
-    last_login_date = DateTimeField('Last Login Date (YYYY-MM-DD HH:MM:SS)', format='%Y-%m-%d %H:%M:%S', validators=[Optional()])
+    surgery_date = DateTimeField('Last Login Date (YYYY-MM-DD HH:MM:SS)', format='%Y-%m-%d %H:%M:%S', validators=[Optional()])
 
 class RecoveryPlanForm(FlaskForm):
     plan_id = IntegerField('Plan ID', validators=[Optional()])
@@ -107,17 +107,12 @@ class VideoSliceImageForm(FlaskForm):
     timestamp = DateTimeField('Timestamp (YYYY-MM-DD HH:MM:SS)', format='%Y-%m-%d %H:%M:%S', validators=[Optional()])
     is_part_of_action = BooleanField('Is Part of Action', validators=[Optional()])
 
-class FormForm(FlaskForm):
-    form_id = IntegerField('Form ID', validators=[Optional()])
-    form_name = StringField('Form Name', validators=[DataRequired()])
-    form_content = TextAreaField('Form Content', validators=[DataRequired()])
-
 class QoLForm(FlaskForm):
     qol_id = IntegerField('qol ID', validators=[Optional()])
-    form_id = IntegerField('Form Id', validators=[DataRequired()])
+    form_name = StringField('Form Name', validators=[DataRequired()])
     user_id = IntegerField('User Id', validators=[DataRequired()])
-    score  = IntegerField('Score', validators=[DataRequired()])
-    level = StringField('Level', validators=[DataRequired()])
+    result = StringField('Result JSON', validators=[DataRequired()])
+    submission_time = StringField('Submission Time', validators=[Optional()])
 
 class NurseForm(FlaskForm):
     nurse_id = IntegerField('Nurse ID', validators=[Optional()])

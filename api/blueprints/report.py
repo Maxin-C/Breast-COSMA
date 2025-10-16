@@ -63,7 +63,7 @@ def detect_upper_body():
         current_app.logger.error(f"Error during detection: {e}", exc_info=True)
         return jsonify({"error": "Internal server error"}), 500
 
-@report_bp.route('/api/reports/upload_sprites', methods=['POST'])
+@report_bp.route('/reports/upload_sprites', methods=['POST'])
 def upload_sprite_sheet():
     if 'files' not in request.files:
         return jsonify({'error': 'No file part in the request'}), 400
@@ -119,7 +119,7 @@ def upload_sprite_sheet():
         current_app.logger.error(f"Database commit failed in upload_sprite_sheet: {e}")
         return jsonify({'error': f'Failed to save records to database: {str(e)}'}), 500
 
-@report_bp.route('/api/reports/evaluate', methods=['POST'])
+@report_bp.route('/reports/evaluate', methods=['POST'])
 def evaluate_exercise_report():
     data = request.json
     record_id = data.get('record_id')
@@ -144,7 +144,7 @@ def evaluate_exercise_report():
         current_app.logger.error(f"An unexpected error in evaluate_exercise_report: {e}")
         return jsonify({"error": f"An unexpected server error occurred: {str(e)}"}), 500
 
-@report_bp.route('/api/reports/<int:record_id>/summarize', methods=['POST'])
+@report_bp.route('/reports/<int:record_id>/summarize', methods=['POST'])
 def summarize_and_save_report(record_id):
     try:
         result = current_app.report_service.summarize_and_save_for_record(record_id)

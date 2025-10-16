@@ -10,12 +10,12 @@ from utils.database import database as db_operations
 from utils.database.models import (
     User, RecoveryPlan, Exercise, UserRecoveryPlan, CalendarSchedule, 
     RecoveryRecord, RecoveryRecordDetail, ChatHistory, VideoSliceImage, 
-    Form, QoL, Nurse, NurseEvaluation
+    QoL, Nurse, NurseEvaluation
 )
 from utils.database.forms import (
     UserForm, RecoveryPlanForm, ExerciseForm, UserRecoveryPlanForm,
     CalendarScheduleForm, RecoveryRecordForm, RecoveryRecordDetailForm,
-    ChatHistoryForm, VideoSliceImageForm, FormForm, QoLForm
+    ChatHistoryForm, VideoSliceImageForm, QoLForm
 )
 from utils.database import database as db_operations
 
@@ -40,7 +40,6 @@ def get_user(user_id):
         return jsonify({"message": "User not found."}), 404
     return jsonify(user.to_dict())
 
-# 新增：根据字段查询用户
 @crud_bp.route('/users/search', methods=['GET'])
 def search_users():
     """
@@ -53,14 +52,10 @@ def search_users():
     if not field_name or not field_value:
         return jsonify({"message": "Missing 'field' or 'value' query parameters."}), 400
 
-    # 简单处理类型转换，例如尝试将数字字符串转换为整数
-    # 更严谨的做法是根据模型字段类型进行转换
     try:
-        # 尝试转换为整数，如果字段名是ID类
         if field_name.endswith('_id') or field_name == 'srrsh_id':
             field_value = int(field_value)
     except ValueError:
-        # 如果转换失败，保留为字符串，让数据库处理
         pass
 
     users = db_operations.get_records_by_field(User, field_name, field_value)
@@ -71,9 +66,6 @@ def search_users():
 
 @crud_bp.route('/users/update_openid', methods=['POST'])
 def update_user_openid():
-    """
-    接收小程序的 code，换取 openid 并更新到用户数据库。
-    """
     data = request.json
     user_id = data.get('user_id')
     code = data.get('code')
@@ -979,103 +971,6 @@ def delete_video_slice_image(image_id):
     else:
         return jsonify({"message": "Error deleting Video Slice Image."}), 500
 
-# --- CRUD Operations for Forms ---
-@crud_bp.route('/forms', methods=['GET'])
-def list_forms():
-    """List all forms."""
-    forms = db_operations.get_all_records(Form)
-    return jsonify([form.to_dict() for form in forms])
-
-@crud_bp.route('/forms/<int:form_id>', methods=['GET'])
-def get_form(form_id):
-    """Get a single form by ID."""
-    form = db_operations.get_record_by_id(Form, form_id)
-    if not form:
-        return jsonify({"message": "Form not found."}), 404
-    return jsonify(form.to_dict())
-
-@crud_bp.route('/forms/search', methods=['GET'])
-def search_forms():
-    """
-    Search forms by a specified field and value.
-    Example: /forms/search?field=form_name&value=Daily Survey
-    """
-    field_name = request.args.get('field')
-    field_value = request.args.get('value')
-
-    if not field_name or not field_value:
-        return jsonify({"message": "Missing 'field' or 'value' query parameters."}), 400
-
-    try:
-        if field_name.endswith('_id'):
-            field_value = int(field_value)
-    except ValueError:
-        pass
-
-    forms = db_operations.get_records_by_field(Form, field_name, field_value)
-    if forms:
-        return jsonify([form.to_dict() for form in forms])
-    else:
-        return jsonify({"message": f"No forms found with {field_name} = {field_value}"}), 404
-
-@crud_bp.route('/forms', methods=['POST'])
-def add_form():
-    """Add a new form."""
-    if not request.is_json:
-        return jsonify({"message": "Request must be JSON"}), 400
-
-    form_data_from_request = request.json
-    form = FormForm(data=form_data_from_request)
-
-    if form.validate():
-        new_form_data = {field.name: field.data for field in form if field.name != 'csrf_token'}
-        new_form_data.pop('form_id', None) # Assume form_id is auto-incrementing
-
-        new_form = db_operations.add_record(Form, new_form_data)
-        if new_form:
-            return jsonify({"message": "Form added successfully!", "form": new_form.to_dict()}), 201
-        else:
-            return jsonify({"message": "Error adding form."}), 500
-    else:
-        return jsonify({"message": "Validation failed", "errors": form.errors}), 400
-
-@crud_bp.route('/forms/<int:form_id>', methods=['PUT'])
-def edit_form(form_id):
-    """Edit an existing form."""
-    existing_form = db_operations.get_record_by_id(Form, form_id)
-    if not existing_form:
-        return jsonify({"message": "Form not found."}), 404
-
-    if not request.is_json:
-        return jsonify({"message": "Request must be JSON"}), 400
-
-    form_data_from_request = request.json
-    form = FormForm(data=form_data_from_request, obj=existing_form)
-
-    if form.validate():
-        updated_form_data = {field.name: field.data for field in form if field.name != 'csrf_token'}
-        updated_form_data.pop('form_id', None) # Primary keys are usually not updated
-
-        updated_form = db_operations.update_record(existing_form, updated_form_data)
-        if updated_form:
-            return jsonify({"message": "Form updated successfully!", "form": updated_form.to_dict()})
-        else:
-            return jsonify({"message": "Error updating form."}), 500
-    else:
-        return jsonify({"message": "Validation failed", "errors": form.errors}), 400
-
-@crud_bp.route('/forms/<int:form_id>', methods=['DELETE'])
-def delete_form(form_id):
-    """Delete a form."""
-    form = db_operations.get_record_by_id(Form, form_id)
-    if not form:
-        return jsonify({"message": "Form not found."}), 404
-
-    if db_operations.delete_record(form):
-        return jsonify({"message": "Form deleted successfully!"})
-    else:
-        return jsonify({"message": "Error deleting form."}), 500
-
 # --- CRUD Operations for QoL ---
 @crud_bp.route('/qols', methods=['GET'])
 def list_qols():
@@ -1104,7 +999,7 @@ def search_qols():
         return jsonify({"message": "Missing 'field' or 'value' query parameters."}), 400
 
     try:
-        if field_name.endswith('_id') or field_name == 'score':
+        if field_name.endswith('_id'):
             field_value = int(field_value)
     except ValueError:
         pass
@@ -1122,12 +1017,31 @@ def add_qol():
         return jsonify({"message": "Request must be JSON"}), 400
 
     form_data_from_request = request.json
+    
+    # 处理result字段：如果是字符串，尝试解析为JSON
+    if 'result' in form_data_from_request and isinstance(form_data_from_request['result'], str):
+        try:
+            form_data_from_request['result'] = json.loads(form_data_from_request['result'])
+        except json.JSONDecodeError:
+            return jsonify({"message": "Invalid JSON format in result field"}), 400
+    
     form = QoLForm(data=form_data_from_request)
 
     if form.validate():
         new_qol_data = {field.name: field.data for field in form if field.name != 'csrf_token'}
-        new_qol_data.pop('qol_id', None) # Assume qol_id is auto-incrementing
-
+        new_qol_data.pop('qol_id', None)  # Assume qol_id is auto-incrementing
+        
+        # 处理result字段
+        if 'result' in new_qol_data and isinstance(new_qol_data['result'], str):
+            try:
+                new_qol_data['result'] = json.loads(new_qol_data['result'])
+            except json.JSONDecodeError:
+                return jsonify({"message": "Invalid JSON format in result field"}), 400
+        
+        # 如果未提供submission_time，设置为当前时间
+        if not new_qol_data.get('submission_time'):
+            new_qol_data['submission_time'] = db.func.current_timestamp()
+        
         new_qol = db_operations.add_record(QoL, new_qol_data)
         if new_qol:
             return jsonify({"message": "QoL record added successfully!", "qol": new_qol.to_dict()}), 201
@@ -1147,12 +1061,27 @@ def edit_qol(qol_id):
         return jsonify({"message": "Request must be JSON"}), 400
 
     form_data_from_request = request.json
+    
+    # 处理result字段：如果是字符串，尝试解析为JSON
+    if 'result' in form_data_from_request and isinstance(form_data_from_request['result'], str):
+        try:
+            form_data_from_request['result'] = json.loads(form_data_from_request['result'])
+        except json.JSONDecodeError:
+            return jsonify({"message": "Invalid JSON format in result field"}), 400
+    
     form = QoLForm(data=form_data_from_request, obj=existing_qol)
 
     if form.validate():
         updated_qol_data = {field.name: field.data for field in form if field.name != 'csrf_token'}
-        updated_qol_data.pop('qol_id', None) # Primary keys are usually not updated
-
+        updated_qol_data.pop('qol_id', None)  # Primary keys are usually not updated
+        
+        # 处理result字段
+        if 'result' in updated_qol_data and isinstance(updated_qol_data['result'], str):
+            try:
+                updated_qol_data['result'] = json.loads(updated_qol_data['result'])
+            except json.JSONDecodeError:
+                return jsonify({"message": "Invalid JSON format in result field"}), 400
+        
         updated_qol = db_operations.update_record(existing_qol, updated_qol_data)
         if updated_qol:
             return jsonify({"message": "QoL record updated successfully!", "qol": updated_qol.to_dict()})
@@ -1172,7 +1101,7 @@ def delete_qol(qol_id):
         return jsonify({"message": "QoL record deleted successfully!"})
     else:
         return jsonify({"message": "Error deleting QoL record."}), 500
-
+        
 # --- CRUD Operations for Nurses ---
 @crud_bp.route('/nurses', methods=['GET'])
 def list_nurses():

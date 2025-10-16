@@ -6,8 +6,6 @@ from flask import current_app
 from api.extensions import db
 from utils.database.models import User, ScheduledNotification
 
-# 用于缓存 access_token，避免频繁请求
-# 注意：在多进程部署(如Gunicorn)中，每个进程会有独立的缓存。更优方案是使用Redis等共享缓存。
 wechat_access_token_cache = {
     "access_token": "",
     "expires_at": 0
@@ -121,7 +119,7 @@ def scheduled_task():
     It creates its own app instance to provide the necessary context.
     """
     # Import create_app locally to avoid circular dependencies at startup
-    from .. import create_app
+    from ...api import create_app
 
     app = create_app()
     with app.app_context():

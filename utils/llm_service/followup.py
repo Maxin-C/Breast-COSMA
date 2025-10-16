@@ -105,18 +105,18 @@ Attention: 必须获取所有表单的所有必选随访问题结果。
         response = completion.model_dump()
         return response['choices'][0]['message']['content']
 
-if __name__ == "__main__":
-    agent = FollowUp()
-    history = []
+# if __name__ == "__main__":
+#     agent = FollowUp()
+#     history = []
 
-    while True:
-        doctor_content = agent.conversation(history=history)
-        print(f"医生：{doctor_content}\n")
-        patient_content = input("患者：")
-        print()
-        history.extend([
-            {"role":"assistant", "content":doctor_content},
-            {"role":"user", "content":patient_content}
-        ])
-        if 'quit' in patient_content:
-            break
+#     while True:
+#         doctor_content = agent.conversation(history=history)
+#         print(f"医生：{doctor_content}\n")
+#         patient_content = input("患者：")
+#         print()
+#         history.extend([
+#             {"role":"assistant", "content":doctor_content},
+#             {"role":"user", "content":patient_content}
+#         ])
+#         if 'quit' in patient_content:
+#             break
