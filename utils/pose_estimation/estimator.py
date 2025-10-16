@@ -235,7 +235,7 @@ class ClipSeq(nn.Module):
         return outputs
 
 class Estimator:
-    def __init__(self, config: Dict):
+    def __init__(self, config: Dict, pose_inferencer: MMPoseInferencer):
         self.config = SimpleNamespace(**config)
         self.device = self.config.device if torch.cuda.is_available() else 'cpu'
 
@@ -243,16 +243,9 @@ class Estimator:
             self.label_info = json.load(f)
         self.num_actual_classes = len(self.label_info)
 
-        mmpose_cfg = json.load(open(self.config.mmpose_config_path, 'r'))
-        self.mmpose_inferencer = MMPoseInferencer(
-            pose2d=mmpose_cfg['pose2d_config'],
-            pose2d_weights=mmpose_cfg['pose2d_checkpoint'],
-            det_model=mmpose_cfg['det_config'],
-            det_weights=mmpose_cfg['det_checkpoint'],
-            pose3d=mmpose_cfg['pose3d_config'],
-            pose3d_weights=mmpose_cfg['pose3d_checkpoint'],
-            device=self.device
-        )
+        if pose_inferencer is None:
+            raise ValueError("An initialized MMPoseInferencer must be provided.")
+        self.mmpose_inferencer = pose_inferencer
         
         self.clip_processor = CLIPProcessor.from_pretrained(self.config.clip_model_path)
         clip_model = CLIPModel.from_pretrained(self.config.clip_model_path)
@@ -378,24 +371,24 @@ class Estimator:
         
         return result_array
 
-if __name__ == '__main__':
-    config = {
-        "device": "cuda:0",
-        "clip_model_path": "/root/huggingface/openai/clip-vit-large-patch14",
-        "trained_model_path": "utils/pose_estimation/model_dict/model_20250716_032346_acc76.46.pth",
-        "label_info_path": "utils/pose_estimation/motion_desc.json",
-        "model_config_path": "utils/pose_estimation/model_config.json",
-        "mmpose_config_path": "utils/pose_estimation/mmpose_config.json"
-    }
+# if __name__ == '__main__':
+#     config = {
+#         "device": "cuda:0",
+#         "clip_model_path": "/root/huggingface/openai/clip-vit-large-patch14",
+#         "trained_model_path": "utils/pose_estimation/model_dict/model_20250716_032346_acc76.46.pth",
+#         "label_info_path": "utils/pose_estimation/motion_desc.json",
+#         "model_config_path": "utils/pose_estimation/model_config.json",
+#         "mmpose_config_path": "utils/pose_estimation/mmpose_config.json"
+#     }
 
-    classifier_service = Estimator(config)
-    sample_sprite_path = "/var/codes/Breast-COMA-Rehab/uploads/slices/1_1755648889472_sprite_sheet.png"
+#     classifier_service = Estimator(config)
+#     sample_sprite_path = "/var/codes/Breast-COMA-Rehab/uploads/slices/1_1755648889472_sprite_sheet.png"
     
-    target_class_id = 1
-    sample_sprite_image = Image.open(sample_sprite_path)
-    results = classifier_service.predict(sample_sprite_image, target_class_id)
+#     target_class_id = 1
+#     sample_sprite_image = Image.open(sample_sprite_path)
+#     results = classifier_service.predict(sample_sprite_image, target_class_id)
 
-    for i, res in enumerate(results):
-        status = "属于" if res == 1 else "不属于"
-        print(f"Frame {i+1}: {status} '{target_class_id}'")
-    print(f"\nRaw output array: {results}")
+#     for i, res in enumerate(results):
+#         status = "属于" if res == 1 else "不属于"
+#         print(f"Frame {i+1}: {status} '{target_class_id}'")
+#     print(f"\nRaw output array: {results}")

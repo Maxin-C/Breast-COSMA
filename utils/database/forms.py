@@ -88,32 +88,15 @@ class RecoveryRecordDetailForm(FlaskForm):
     actual_repetitions_completed = IntegerField('Actual Repetitions Completed', validators=[Optional(), NumberRange(min=0)])
     evaluation_details = TextAreaField('AI Evaluation Result', validators=[Optional()])
     completion_timestamp = DateTimeField('Completion Timestamp (YYYY-MM-DD HH:MM:SS)', format='%Y-%m-%d %H:%M:%S', validators=[Optional()])
-    video_path = StringField('Video Path', validators=[Optional(), Length(max=255)]) # <--- 新增此行
-
-# class MessageChatForm(FlaskForm):
-#     message_id = IntegerField('Message ID', validators=[Optional()]) # AUTO_INCREMENT, so optional for add
-#     conversation_id = StringField('Conversation ID', validators=[DataRequired(), Length(max=255)])
-#     is_follow_up = BooleanField('Is Follow Up Conversation', validators=[DataRequired()])
-#     sender_id = IntegerField('Sender ID', validators=[DataRequired()])
-#     sender_type = SelectField('Sender Type', choices=[('user', 'User'), ('assistant', 'Assistant'), ('professional', 'Professional')], validators=[DataRequired()])
-#     receiver_id = IntegerField('Receiver ID', validators=[DataRequired()])
-#     receiver_type = SelectField('Receiver Type', choices=[('user', 'User'), ('assistant', 'Assistant'), ('professional', 'Professional')], validators=[DataRequired()])
-#     message_text = TextAreaField('Message Text', validators=[DataRequired()])
-#     timestamp = DateTimeField('Timestamp (YYYY-MM-DD HH:MM:SS)', format='%Y-%m-%d %H:%M:%S', validators=[Optional()])
+    video_path = StringField('Video Path', validators=[Optional(), Length(max=255)])
 
 class ChatHistoryForm(FlaskForm):
     message_id = IntegerField('Message ID', validators=[Optional()])
-
     conversation_id = StringField('Conversation ID', validators=[DataRequired(), Length(max=255)])
-
     user_id = IntegerField('User ID', validators=[DataRequired()])
-
     is_follow_up = BooleanField('Is Follow Up Conversation', validators=[Optional()])
-
     new_message_text = TextAreaField('New Message Text', validators=[DataRequired()])
-
     timestamp = DateTimeField('Timestamp', format='%Y-%m-%d %H:%M:%S', validators=[Optional()])
-
 
 class VideoSliceImageForm(FlaskForm):
     image_id = IntegerField('Image ID', validators=[Optional()])
@@ -122,6 +105,7 @@ class VideoSliceImageForm(FlaskForm):
     slice_order = IntegerField('Slice Order', validators=[Optional(), NumberRange(min=0)])
     image_path = StringField('Image Path', validators=[Optional(), Length(max=255)])
     timestamp = DateTimeField('Timestamp (YYYY-MM-DD HH:MM:SS)', format='%Y-%m-%d %H:%M:%S', validators=[Optional()])
+    is_part_of_action = BooleanField('Is Part of Action', validators=[Optional()])
 
 class FormForm(FlaskForm):
     form_id = IntegerField('Form ID', validators=[Optional()])

@@ -4,8 +4,7 @@ from datetime import datetime, timedelta
 from api.extensions import db
 from api.decorators import login_required
 from utils.database.models import User, ScheduledNotification
-# 从新的服务模块导入核心功能
-from api.services.wechat import send_subscription_message
+from utils.wechat_service.wechat import send_subscription_message
 
 messaging_bp = Blueprint('messaging', __name__, url_prefix='/api')
 

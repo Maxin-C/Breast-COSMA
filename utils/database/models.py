@@ -161,6 +161,7 @@ class VideoSliceImage(Base):
     slice_order = db.Column(db.Integer)
     image_path = db.Column(db.String(255))
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    is_part_of_action = db.Column(db.Boolean, default=False)
 
 class Form(Base):
     __tablename__ = 'forms'

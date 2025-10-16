@@ -1,12 +1,17 @@
 from flask import Flask
 from config import Config
+import json
 from .extensions import db, compress, csrf, scheduler
 import os
 
 from utils.llm_service.consult import Consult
 from utils.llm_service.report import ReportGenerator 
+from utils.pose_estimation.estimator_service import ActionClassifierService
+from utils.detect_upper_body.detector import UpperBodyDetector
+from utils.wechat_service.wechat import send_scheduled_notifications
+
 from apscheduler.schedulers.background import BackgroundScheduler
-from api.services.wechat import send_scheduled_notifications
+from mmpose.apis import MMPoseInferencer
 
 def create_app(config_class=Config):
     app = Flask(__name__, template_folder='../templates')
@@ -23,7 +28,7 @@ def create_app(config_class=Config):
     if not scheduler.running:
         scheduler.configure(jobstores=app.config['SCHEDULER_JOBSTORES'])
         scheduler.add_job(
-            func='api.services.wechat:scheduled_task',
+            func='utils.wechat_service.wechat:scheduled_task',
             trigger='cron',
             hour=8,
             minute=0,
@@ -33,8 +38,7 @@ def create_app(config_class=Config):
         )
 
         scheduler.add_job(
-            # Use the STRING PATH to the importable function
-            func='api.services.wechat:scheduled_task',
+            func='utils.wechat_service.wechat:scheduled_task',
             trigger='interval',
             minutes=20,
             id='send_notifications_job',
@@ -44,9 +48,24 @@ def create_app(config_class=Config):
         print("Scheduler has been started.")
 
     with app.app_context():
-        # app.consult_service = Consult()
-        app.consult_service = None
+        app.consult_service = Consult()
         app.report_service = ReportGenerator(db_session=db.session)
+
+        mmpose_config_path = os.getenv("MMPOSE_CONFIG_PATH")
+        mmpose_cfg = json.load(open(mmpose_config_path, 'r'))
+        
+        shared_pose_inferencer = MMPoseInferencer(
+            pose2d=mmpose_cfg['pose2d_config'],
+            pose2d_weights=mmpose_cfg['pose2d_checkpoint'],
+            det_model=mmpose_cfg['det_config'],
+            det_weights=mmpose_cfg['det_checkpoint'],
+            device=os.getenv("INFERENCE_DEVICE", "cuda:0")
+        )
+        app.pose_inferencer = shared_pose_inferencer
+
+        app.action_classifier_service = ActionClassifierService(
+            pose_inferencer=app.pose_inferencer
+        )
 
         upload_folder = os.getenv("SLICE_SAVE_PATH", "uploads/slices")
         video_folder = os.getenv("VIDEO_SAVE_PATH", "uploads/videos")
@@ -58,7 +77,6 @@ def create_app(config_class=Config):
     
         db.create_all()
 
-    # Import and register blueprints
     from .blueprints.auth import auth_bp
     from .blueprints.main import main_bp
     from .blueprints.report import report_bp

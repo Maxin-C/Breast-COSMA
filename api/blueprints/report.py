@@ -6,82 +6,62 @@ import numpy as np
 import cv2
 from datetime import datetime
 from dotenv import load_dotenv
+from PIL import Image
 
 from flask import Blueprint, request, jsonify, current_app, send_from_directory, session
 from werkzeug.utils import secure_filename
 
 from api.extensions import db
-from utils.detect_upper_body.detector import UpperBodyDetector
 from utils.database.models import VideoSliceImage, RecoveryRecord, RecoveryRecordDetail
 
 load_dotenv()
 
 report_bp = Blueprint('report', __name__)
 
-mmpose_config_path="utils/pose_estimation/mmpose_config.json"
-mmpose_config = SimpleNamespace(**json.load(open(mmpose_config_path,'r')))
-detector_device = "cuda:0"
-try:
-    detector = UpperBodyDetector(mmpose_config.pose2d_config, mmpose_config.pose2d_checkpoint, device=detector_device, margin_ratio=0.05)
-except Exception as e:
-    print(f"Failed to initialize UpperBodyDetector: {e}")
-    detector = None
-
-detection_history = {
-    'last_result': True,
-    'consecutive_false_count': 0
-}
+UPLOAD_FOLDER = os.getenv("SLICE_SAVE_PATH", "uploads/slices")
+VIDEO_FOLDER = os.getenv("VIDEO_SAVE_PATH", "uploads/videos")
 
 @report_bp.route('/detect_upper_body', methods=['POST'])
 def detect_upper_body():
     if 'detection_history' not in session:
-        session['detection_history'] = {
-            'last_result': True,
-            'consecutive_false_count': 0
-        }
-    
-    if 'image' not in request.files:
-        return jsonify({"error": "No image file provided. Please upload an image with key 'image'."}), 400
+        session['detection_history'] = {'consecutive_false_count': 0}
 
+    detector = current_app.pose_inferencer
+
+    if detector is None:
+        return jsonify({"error": "Pose detection model is not available."}), 503
+
+    if 'image' not in request.files:
+        return jsonify({"error": "No image file provided."}), 400
+    
     file = request.files['image']
-    if file.filename == '':
+    if not file or not file.filename:
         return jsonify({"error": "No selected file"}), 400
 
-    if file:
-        try:
-            nparr = np.frombuffer(file.read(), np.uint8)
-            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    try:
+        nparr = np.frombuffer(file.read(), np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-            if img is None:
-                return jsonify({"error": "Could not decode image. Please ensure it's a valid image format."}), 400
+        result_generator = detector(img, show=False)
+        result = next(result_generator)
+        
+        current_detection = bool(result['predictions'] and result['predictions'][0])
+        
+        user_history = session['detection_history']
+        if not current_detection:
+            user_history['consecutive_false_count'] += 1
+        else:
+            user_history['consecutive_false_count'] = 0
+        
+        response_value = False if user_history['consecutive_false_count'] >= 2 else True
+        session['detection_history'] = user_history
+        session.modified = True
+        
+        return jsonify({"is_upper_body_in_frame": response_value}), 200
 
-            current_detection = detector.detect(img)
-
-            user_history = session['detection_history']
-            
-            if not current_detection:
-                detection_history['consecutive_false_count'] += 1
-            else:
-                detection_history['consecutive_false_count'] = 0
-                detection_history['last_result'] = True
-            
-            response_value = False if detection_history['consecutive_false_count'] >= 2 else True
-            
-            detection_history['last_result'] = response_value
-
-            session['detection_history'] = user_history
-            session.modified = True 
-            
-            response_data = {"is_upper_body_in_frame": response_value}
-            return jsonify(response_data), 200
-
-        except Exception as e:
-            print(f"Error during detection: {e}")
-            return jsonify({"error": f"Internal server error: {str(e)}"}), 500
-
-
-UPLOAD_FOLDER = os.getenv("SLICE_SAVE_PATH", "uploads/slices")
-VIDEO_FOLDER = os.getenv("VIDEO_SAVE_PATH", "uploads/video")
+    except Exception as e:
+        current_app.logger.error(f"Error during detection: {e}", exc_info=True)
+        return jsonify({"error": "Internal server error"}), 500
 
 @report_bp.route('/api/reports/upload_sprites', methods=['POST'])
 def upload_sprite_sheet():
@@ -90,7 +70,7 @@ def upload_sprite_sheet():
 
     files = request.files.getlist('files')
     record_id = request.form.get('record_id')
-    exercise_id = request.form.get('exercise_id') # 旧称 actionCategory
+    exercise_id = request.form.get('exercise_id')
 
     if not record_id or not exercise_id:
         return jsonify({'error': 'Fields "record_id" and "exercise_id" are required'}), 400
@@ -110,13 +90,20 @@ def upload_sprite_sheet():
         file.save(absolute_filepath)
         
         db_relative_path = os.path.join(UPLOAD_FOLDER, filename)
+
+        pil_image = Image.open(absolute_filepath)
+        frame_results = current_app.action_classifier_service.predict_frames_in_sprite(
+            pil_image,
+            int(exercise_id)
+        )
         
         slice_image = VideoSliceImage(
             record_id=record_id,
             exercise_id=int(exercise_id),
             slice_order=slice_order_start + i,
-            image_path=db_relative_path, # 存入相对路径
-            timestamp=datetime.now()
+            image_path=db_relative_path,
+            timestamp=datetime.now(),
+            is_part_of_action=(frame_results == 1)
         )
         db.session.add(slice_image)
         saved_files_info.append(db_relative_path)

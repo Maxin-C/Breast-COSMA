@@ -136,8 +136,15 @@ class ReportGenerator:
         
         if video_filepath is None:
             image_slices = self.db_session.query(VideoSliceImage).filter_by(
-                record_id=record_id, exercise_id=exercise_id
-            ).order_by(VideoSliceImage.timestamp, VideoSliceImage.slice_order).all()
+                record_id=record_id,
+                exercise_id=exercise_id
+            ).filter(
+                or_(
+                    VideoSliceImage.is_part_of_action == True,
+                    VideoSliceImage.is_part_of_action.is_(None)
+                )
+            ).order_by(VideoSliceImage.timestamp).all()
+
             if not image_slices:
                 return {'success': False, 'error': f"未找到与 Record ID {record_id} 和 Exercise ID {exercise_id} 相关的图片记录。"}
             
