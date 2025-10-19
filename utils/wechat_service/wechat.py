@@ -114,12 +114,7 @@ def send_scheduled_notifications():
     print(f"任务完成：处理了 {len(notifications_to_send)} 条通知。")
 
 def scheduled_task():
-    """
-    This is the entry point for our scheduled job.
-    It creates its own app instance to provide the necessary context.
-    """
-    # Import create_app locally to avoid circular dependencies at startup
-    from ...api import create_app
+    from api import create_app
 
     app = create_app()
     with app.app_context():

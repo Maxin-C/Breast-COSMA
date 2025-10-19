@@ -3,7 +3,11 @@ import json
 import numpy as np
 import cv2
 from flask import Blueprint, jsonify, request
-from datetime import datetime
+from datetime import datetime, date, timedelta
+from sqlalchemy import and_
+from dotenv import load_dotenv
+import requests
+load_dotenv()
 
 from api.extensions import db
 from utils.database import database as db_operations
@@ -15,11 +19,33 @@ from utils.database.models import (
 from utils.database.forms import (
     UserForm, RecoveryPlanForm, ExerciseForm, UserRecoveryPlanForm,
     CalendarScheduleForm, RecoveryRecordForm, RecoveryRecordDetailForm,
-    ChatHistoryForm, VideoSliceImageForm, QoLForm
+    ChatHistoryForm, VideoSliceImageForm, QoLForm, NurseForm, NurseEvaluationForm
 )
 from utils.database import database as db_operations
 
 crud_bp = Blueprint('crud', __name__)
+
+def _calculate_plan_id(user):
+    if not user.surgery_date:
+        # 如果没有手术日期，默认分配第一个计划
+        return 1
+
+    # 计算术后天数，当天算第1天
+    days_since_surgery = (date.today() - user.surgery_date.date()).days + 1
+    
+    if days_since_surgery <= 1:
+        return 1
+    elif days_since_surgery == 2:
+        return 2
+    elif days_since_surgery == 3:
+        return 3
+    elif 4 <= days_since_surgery <= 7:
+        return 4
+    else:  # 7天以后
+        if user.extubation_status == '未拔管':
+            return 5
+        else:  # '已拔管'
+            return 6
 
 @crud_bp.route('/')
 def index():
@@ -74,8 +100,8 @@ def update_user_openid():
         return jsonify({"error": "缺少 user_id 或 code"}), 400
 
     # 从应用配置中获取小程序的 appid 和 secret
-    appid = current_app.config.get('WECHAT_APPID')
-    secret = current_app.config.get('WECHAT_APPSECRET')
+    appid = os.getenv('WECHAT_APPID')
+    secret = os.getenv('WECHAT_APPSECRET')
 
     if not appid or not secret:
         print("错误: WECHAT_APPID 或 WECHAT_APPSECRET 未在后端配置。")
@@ -177,6 +203,116 @@ def delete_user(user_id):
         return jsonify({"message": "User deleted successfully!"})
     else:
         return jsonify({"message": "Error deleting user."}), 500
+
+@crud_bp.route('/users/register', methods=['POST'])
+def register_user():
+    """
+    专门处理新用户注册的接口，包含护士编号验证和动态计划分配。
+    """
+    data = request.json
+    name = data.get('name')
+    surgery_date_str = data.get('surgery_date')
+    nurse_id_suffix = data.get('nurse_id')
+
+    if not all([name, surgery_date_str, nurse_id_suffix]):
+        return jsonify({"error": "姓名、手术时间和护士编号均为必填项"}), 400
+
+    # 步骤1: 验证护士编号
+    nurse = db.session.query(Nurse).filter_by(phone_number_suffix=nurse_id_suffix).first()
+    if not nurse:
+        return jsonify({"error": "无效的护士编号，请核对后重试"}), 403
+
+    # 步骤2: 检查用户是否已存在
+    existing_user = db.session.query(User).filter_by(name=name).first()
+    if existing_user:
+        return jsonify({"error": f"姓名 '{name}' 已被注册，请直接登录"}), 409
+
+    try:
+        # 步骤3: 创建新用户
+        new_user = User(
+            name=name,
+            surgery_date=datetime.strptime(surgery_date_str, '%Y-%m-%d'),
+            extubation_status='未拔管',
+            registration_date=datetime.utcnow()
+        )
+        db.session.add(new_user)
+        db.session.flush()
+
+        # 步骤4: 【核心修改】调用辅助函数计算正确的 plan_id
+        new_plan_id = _calculate_plan_id(new_user)
+        
+        initial_plan = UserRecoveryPlan(
+            user_id=new_user.user_id,
+            plan_id=new_plan_id,
+            status='active'
+        )
+        db.session.add(initial_plan)
+        
+        db.session.commit()
+
+        return jsonify({
+            "message": "用户注册成功！",
+            "user": new_user.to_dict(),
+            "user_plan": initial_plan.to_dict()
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error during user registration: {e}")
+        return jsonify({"error": "服务器内部错误，注册失败"}), 500
+
+@crud_bp.route('/users/login_logic', methods=['POST'])
+def handle_login_logic():
+    """
+    处理登录后的业务逻辑：更新拔管状态和康复计划plan_id。
+    """
+    data = request.json
+    user_id = data.get('user_id')
+    if not user_id:
+        return jsonify({"error": "缺少 user_id"}), 400
+
+    user = db_operations.get_record_by_id(User, user_id)
+    if not user:
+        return jsonify({"error": "用户不存在"}), 404
+
+    try:
+        # 步骤1: 更新拔管状态
+        new_extubation_status = data.get('extubation_status')
+        if new_extubation_status and user.extubation_status != new_extubation_status:
+            user.extubation_status = new_extubation_status
+            print(f"User {user_id} extubation_status updated to {new_extubation_status}")
+
+        # 步骤2: 【核心修改】调用辅助函数计算 plan_id
+        new_plan_id = _calculate_plan_id(user)
+        
+        print(f"User {user_id}: New plan_id should be {new_plan_id}")
+
+        # 步骤3: 更新或创建 UserRecoveryPlan
+        user_plan = db.session.query(UserRecoveryPlan).filter_by(user_id=user_id).first()
+        
+        if user_plan:
+            if user_plan.plan_id != new_plan_id:
+                user_plan.plan_id = new_plan_id
+                user_plan.assigned_date = datetime.utcnow()
+                user_plan.status = 'active'
+                print(f"User {user_id} recovery plan updated to plan_id {new_plan_id}")
+        else:
+            user_plan = UserRecoveryPlan(user_id=user_id, plan_id=new_plan_id, status='active')
+            db.session.add(user_plan)
+            print(f"New recovery plan created for user {user_id} with plan_id {new_plan_id}")
+
+        db.session.commit()
+        
+        return jsonify({
+            "message": "User status and plan updated successfully.",
+            "user_plan_id": user_plan.user_plan_id,
+            "plan_id": user_plan.plan_id
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error in handle_login_logic for user {user_id}: {e}")
+        return jsonify({"error": "服务器内部错误"}), 500
 
 # --- CRUD Operations for Recovery Plans ---
 @crud_bp.route('/recovery_plans', methods=['GET'])
@@ -1338,3 +1474,54 @@ def get_user_recovery_plan_by_user_id(user_id):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@crud_bp.route('/users/check_followup_status', methods=['GET'])
+def check_followup_status():
+    user_id = request.args.get('user_id', type=int)
+    if not user_id:
+        return jsonify({"error": "缺少 user_id"}), 400
+
+    user = db_operations.get_record_by_id(User, user_id)
+    if not user or not user.registration_date:
+        return jsonify({
+            "is_followup_week": False,
+            "has_completed_followup": True 
+        }), 200
+
+    try:
+        today = date.today()
+        registration_date = user.registration_date.date()
+        
+        days_since_registration = (today - registration_date).days
+        
+        current_week = days_since_registration // 7
+        
+        followup_weeks = [0, 2, 4, 6]
+        
+        is_followup_week = current_week in followup_weeks
+
+        if not is_followup_week:
+            return jsonify({
+                "is_followup_week": False,
+                "has_completed_followup": False 
+            }), 200
+
+        start_of_followup_week = registration_date + timedelta(days=current_week * 7)
+        end_of_followup_week = start_of_followup_week + timedelta(days=6)
+
+        completed_this_week = db.session.query(QoL).filter(
+            and_(
+                QoL.user_id == user_id,
+                QoL.submission_time >= start_of_followup_week,
+                QoL.submission_time < (end_of_followup_week + timedelta(days=1))
+            )
+        ).first()
+
+        return jsonify({
+            "is_followup_week": True,
+            "has_completed_followup": completed_this_week is not None
+        }), 200
+
+    except Exception as e:
+        print(f"Error in check_followup_status for user {user_id}: {e}")
+        return jsonify({"error": "服务器内部错误"}), 500

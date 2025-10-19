@@ -6,7 +6,7 @@ from api.decorators import login_required
 from utils.database.models import User, ScheduledNotification
 from utils.wechat_service.wechat import send_subscription_message
 
-messaging_bp = Blueprint('messaging', __name__, url_prefix='/api')
+messaging_bp = Blueprint('messaging', __name__)
 
 @messaging_bp.route('/send_notification', methods=['POST'])
 @login_required
@@ -41,23 +41,33 @@ def send_notification():
 def schedule_notification():
     """
     接收前端的用户授权，并安排第二天的通知。
+    现在会接收 reminder_time 参数，并根据 user_id, template_id 和 scheduled_time 检查重复。
     """
     req_data = request.json
     user_id = req_data.get('user_id')
     template_id = req_data.get('template_id')
+    reminder_time_str = req_data.get('reminder_time', '08:00') # 默认为 08:00
 
     if not user_id or not template_id:
         return jsonify({"error": "缺少 user_id 或 template_id"}), 400
 
-    now = datetime.now()
-    tomorrow = now + timedelta(days=1)
-    scheduled_time = tomorrow.replace(hour=8, minute=0, second=0, microsecond=0)
-
     try:
-        existing_notification = ScheduledNotification.query.filter_by(
-            user_id=user_id,
-            template_id=template_id,
-            status='pending'
+        # 解析前端传来的时间
+        reminder_hour, reminder_minute = map(int, reminder_time_str.split(':'))
+        
+        now = datetime.now()
+        tomorrow = now + timedelta(days=1)
+        # 使用用户设定的时间来创建第二天的提醒时间
+        scheduled_time = tomorrow.replace(hour=reminder_hour, minute=reminder_minute, second=0, microsecond=0)
+
+        # 检查是否已存在完全相同的待处理通知 (用户、模板、精确到分钟的时间)
+        existing_notification = ScheduledNotification.query.filter(
+            ScheduledNotification.user_id == user_id,
+            ScheduledNotification.template_id == template_id,
+            db.func.date(ScheduledNotification.scheduled_time) == scheduled_time.date(),
+            db.func.hour(ScheduledNotification.scheduled_time) == scheduled_time.hour,
+            db.func.minute(ScheduledNotification.scheduled_time) == scheduled_time.minute,
+            ScheduledNotification.status == 'pending'
         ).first()
 
         if existing_notification:
@@ -72,7 +82,7 @@ def schedule_notification():
         db.session.commit()
 
         return jsonify({
-            "message": "订阅成功！我们将在明天上午8点提醒您。",
+            "message": f"订阅成功！我们将在明天 {reminder_time_str} 提醒您。",
             "scheduled_time": scheduled_time.isoformat()
         }), 201
 

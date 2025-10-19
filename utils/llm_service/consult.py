@@ -20,8 +20,10 @@ class Consult:
         self.default_system_message = """
         你是一个专业的术后康复训练助手，专门帮助乳腺癌术后患者进行康复训练。
         你能够提供专业的康复建议、解释训练动作、记录训练进度，并回答患者关于康复过程的问题。
+        不要为患者推荐锻炼动作。
         请保持专业、友好和鼓励的态度，使用简单易懂的语言解释医学概念。
         你的回答应直接切入主题，无需重复问题，并尽量简洁。
+        生成的内容必须少于150字，内容必须简洁。
         """
 
         self.follow_up_forms = []
@@ -32,7 +34,7 @@ class Consult:
                     form_file_path = os.path.join(form_path, f)
                     self.follow_up_forms.append(json.load(open(form_file_path, 'r', encoding='utf-8')))
     
-    def process_message(self, user_id: int, query: str, conversation_id: Optional[str] = None, mode: str = 'consult') -> Dict[str, Any]:
+    def process_message(self, user_id: int, query: str, conversation_id: Optional[str] = None, mode: str = 'consult', end_conversation: bool = False) -> Dict[str, Any]:
         is_follow_up_mode = (mode == 'followup')
         original_conversation_id = conversation_id
 
@@ -43,7 +45,7 @@ class Consult:
                 conversation_id = None 
 
         if is_follow_up_mode:
-            response = self.chat_followup(user_id=user_id, user_query=query, conversation_id=conversation_id, history=[])
+            response = self.chat_followup(user_id=user_id, user_query=query, conversation_id=conversation_id)
         else:
             response = self.chat_consult(user_id=user_id, query=query, conversation_id=conversation_id)
         
@@ -72,7 +74,7 @@ class Consult:
         chat_summaries = db.session.query(ChatHistory).filter(
             ChatHistory.user_id == user_id,
             ChatHistory.summary.isnot(None)
-        ).order_by(ChatHistory.updated_at.asc()).all()
+        ).order_by(ChatHistory.timestamp.asc()).all()
         
         summary_lines = []
         if chat_summaries:
@@ -112,9 +114,9 @@ class Consult:
 
         return "\n\n".join(context_parts)
 
-    def _get_conversation_history(self, conversation_id: str, mode: str) -> List[Dict[str, str]]:
+    def _get_conversation_history(self, conversation_id: str) -> List[Dict[str, str]]:
         record = db.session.query(ChatHistory).filter(ChatHistory.conversation_id == conversation_id).first()
-        if record and record.chat_history and (mode=='followup') == record.is_follow_up:
+        if record and record.chat_history:
             return record.chat_history
         return []
 
@@ -255,7 +257,7 @@ class Consult:
                 'conversation_id': conversation_id
             }
     
-    def chat_followup(self, user_id: int, user_query: str, conversation_id: Optional[str], history: list) -> Dict[str, Any]:
+    def chat_followup(self, user_id: int, user_query: str, conversation_id: Optional[str]) -> Dict[str, Any]:
         if not conversation_id:
             conversation_id = str(uuid.uuid4())
             
@@ -266,7 +268,7 @@ class Consult:
                 'conversation_id': conversation_id,
                 'timestamp': datetime.now().isoformat()
             }
-        
+        history = self._get_conversation_history(conversation_id)
         history.append({"role": "user", "content": user_query})
 
         messages = [{"role": "system", "content": f'''
