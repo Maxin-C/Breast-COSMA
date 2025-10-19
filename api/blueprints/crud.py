@@ -4,7 +4,7 @@ import numpy as np
 import cv2
 from flask import Blueprint, jsonify, request
 from datetime import datetime, date, timedelta
-from sqlalchemy import and_
+from sqlalchemy import and_, func
 from dotenv import load_dotenv
 import requests
 load_dotenv()
@@ -1524,4 +1524,81 @@ def check_followup_status():
 
     except Exception as e:
         print(f"Error in check_followup_status for user {user_id}: {e}")
+        return jsonify({"error": "服务器内部错误"}), 500
+
+@crud_bp.route('/api/users/<int:user_id>/progress', methods=['GET'])
+def get_user_progress(user_id):
+    """
+    计算用户从注册开始6周内的康复训练进度。
+    """
+    user = db_operations.get_record_by_id(User, user_id)
+    if not user or not user.registration_date:
+        return jsonify({
+            "training_days": 0,
+            "progress_percentage": 0
+        }), 200
+
+    try:
+        registration_date = user.registration_date.date()
+        end_date = registration_date + timedelta(days=42) # 6 weeks * 7 days
+        today = date.today()
+
+        total_days = 42
+            
+        # 查询在6周内的不重复的训练天数
+        training_days_query = db.session.query(func.count(func.distinct(func.date(RecoveryRecord.record_date)))).filter(
+            RecoveryRecord.user_id == user_id,
+            RecoveryRecord.record_date >= registration_date,
+            RecoveryRecord.record_date < (end_date + timedelta(days=1)) # 包含end_date
+        )
+        
+        training_days = training_days_query.scalar() or 0
+        
+        progress_percentage = 0
+        if total_days > 0:
+            progress_percentage = round((training_days / total_days) * 100)
+            
+        return jsonify({
+            "training_days": training_days,
+            "progress_percentage": progress_percentage,
+            "total_days_in_period": total_days
+        }), 200
+
+    except Exception as e:
+        print(f"Error in get_user_progress for user {user_id}: {e}")
+        return jsonify({"error": "服务器内部错误"}), 500
+
+@crud_bp.route('/user_recovery_plans/<int:user_id>/exercises', methods=['GET'])
+def get_user_recovery_plan_exercises(user_id):
+    """获取用户当前康复计划中包含的训练动作ID列表"""
+    try:
+        # 查询用户当前激活的康复计划
+        user_plan = db.session.query(
+            RecoveryPlan.description
+        ).join(
+            UserRecoveryPlan, RecoveryPlan.plan_id == UserRecoveryPlan.plan_id
+        ).filter(
+            UserRecoveryPlan.user_id == user_id,
+            UserRecoveryPlan.status == 'active'
+        ).order_by(
+            UserRecoveryPlan.assigned_date.desc()
+        ).first()
+
+        if not user_plan or not user_plan.description:
+            return jsonify({"error": "No active recovery plan with exercises found for this user."}), 404
+
+        # 解析 description 字段以获取动作ID列表
+        try:
+            # The description is a JSON string like "[1,2,3]", so we use json.loads
+            exercise_ids = json.loads(user_plan.description)
+            if not isinstance(exercise_ids, list):
+                raise ValueError("Description is not a valid JSON list.")
+        except (json.JSONDecodeError, ValueError, AttributeError) as e:
+            print(f"Error parsing exercise IDs from description for user {user_id}: {e}")
+            return jsonify({"error": "Failed to parse exercise list from recovery plan."}), 500
+
+        return jsonify({"exercise_ids": exercise_ids}), 200
+
+    except Exception as e:
+        print(f"Error in get_user_recovery_plan_exercises for user {user_id}: {e}")
         return jsonify({"error": "服务器内部错误"}), 500

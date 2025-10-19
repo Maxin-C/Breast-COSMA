@@ -57,12 +57,19 @@ def create_app(config_class=Config):
         shared_pose_inferencer = MMPoseInferencer(
             pose2d=mmpose_cfg['pose2d_config'],
             pose2d_weights=mmpose_cfg['pose2d_checkpoint'],
+            pose3d=mmpose_cfg['pose3d_config'], 
+            pose3d_weights=mmpose_cfg['pose3d_checkpoint'],
             det_model=mmpose_cfg['det_config'],
             det_weights=mmpose_cfg['det_checkpoint'],
             device=os.getenv("INFERENCE_DEVICE", "cuda:0")
         )
         app.pose_inferencer = shared_pose_inferencer
 
+        app.upper_body_detector = UpperBodyDetector(
+            config_path=mmpose_cfg['pose2d_config'],
+            checkpoint_path=mmpose_cfg['pose2d_checkpoint'],
+            device=os.getenv("INFERENCE_DEVICE", "cuda:0")
+        )
         app.action_classifier_service = ActionClassifierService(
             pose_inferencer=app.pose_inferencer
         )

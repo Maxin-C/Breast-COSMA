@@ -11,7 +11,7 @@ from openai import OpenAI
 import dashscope
 from dashscope import MultiModalConversation
 from typing import List, Dict, Any, Optional
-
+from sqlalchemy import or_
 from utils.database.models import VideoSliceImage, RecoveryRecordDetail, RecoveryRecord
 
 class ReportGenerator:
@@ -94,27 +94,38 @@ class ReportGenerator:
             print(f"[Info] 正在读取并编码视频文件: {video_filepath}")
             with open(video_filepath, "rb") as video_file:
                 base64_video = base64.b64encode(video_file.read()).decode("utf-8")
-            
+
             video_data_uri = f"data:video/mp4;base64,{base64_video}"
 
         except FileNotFoundError:
             print(f"[Error] 视频文件未找到: {video_filepath}")
             raise
-        
+
         exercise_description = self.exercise_desc[exercise_id]
         
-        prompt = (f"作为一名专业的乳腺癌术后上肢物理康复治疗师，请根据下面提供的**康复训练视频**，"
-                  f"参照**标准动作描述**对患者的动作进行全面评估，字数不超过150字。"
-                  f"评估要求：1. 动作规范性；2. 动作幅度和节奏；3. 潜在错误；4. 改进建议。"
-                  f"请提供一个综合性的评估报告。\n"
-                  f"**标准动作描述**：{exercise_description['name']}：{exercise_description['desc']}\n"
-                  f"**康复训练视频**：") 
+        system_prompt = (
+            "你是一名专业的乳腺癌术后上肢物理康复治疗师。请根据下面提供的康复训练视频和标准动作描述，对患者的动作进行全面评估，并以JSON格式返回一个包含10分制分数（score）和评估报告（report）的对象。"
+            "评估要求：1. 动作规范性；2. 动作幅度和节奏；3. 潜在错误；4. 改进建议。"
+            "分数（score）应为0到10之间的整数，综合反映动作的完成质量。"
+            "报告（report）为不超过150字的综合性评估文本。"
+            "输出为json，格式为{'score': '', report: ''}"
+        )
         
-        content = [
-            {'video': video_data_uri},
-            {'text': prompt}
+        user_prompt = f"**标准动作描述**：{exercise_description['name']}：{exercise_description['desc']}\n**康复训练视频**："
+
+        return [
+            {
+                "role": "system",
+                "content": system_prompt
+            },
+            {
+                'role': 'user', 
+                'content': [
+                    {'video': video_data_uri},
+                    {'text': user_prompt}
+                ]
+            }
         ]
-        return [{'role': 'user', 'content': content}]
         
     def evaluate_and_save(self, record_id: int, exercise_id: int) -> Dict[str, Any]:
         print(f"[Info] 开始处理 Record ID: {record_id}, Exercise ID: {exercise_id}")
@@ -192,9 +203,23 @@ class ReportGenerator:
     def summarize_rehab_reports(self, reports: List[str]) -> str:
         if not reports:
             return "报告列表为空，无法总结。"
+
+        # Extract the 'report' text from each JSON string in the list
+        report_texts = []
+        for r in reports:
+            try:
+                report_json = json.loads(r)
+                if 'report' in report_json:
+                    report_texts.append(report_json['report'])
+            except (json.JSONDecodeError, TypeError):
+                if isinstance(r, str):
+                    report_texts.append(r)
         
-        combined_reports = "\n---\n".join(reports)
-        prompt = f"你是一名专业的康复治疗师助理，你的任务是分析和总结多份康复锻炼报告。\n请仔细阅读以下提供的多份关于上肢康复锻炼的独立报告，并将它们的核心信息整合成一份全面、连贯、有条理的综合性总结报告。\n--- 原始报告如下 ---\n{combined_reports}"
+        if not report_texts:
+            return "无法从提供的报告记录中提取有效的文本内容进行总结。"
+
+        combined_reports = "\n---\n".join(report_texts)
+        prompt = f"你是一名专业的康复治疗师助理，你的任务是分析和总结多份康复锻炼报告。\n请仔细阅读以下提供的多份关于上肢康复锻炼的独立报告，并将它们的核心信息整合成一份全面、连贯、有条理的综合性总结报告。字数不超过250字。\n--- 原始报告如下 ---\n{combined_reports}"
         
         messages = [{"role": "user", "content": prompt}]
         

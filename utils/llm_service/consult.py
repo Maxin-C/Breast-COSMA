@@ -8,6 +8,7 @@ from datetime import datetime
 from .retriever import Retriever 
 from ..database.models import db, User, RecoveryRecord, ChatHistory, QoL
 from ..database import database as db_operations
+from sqlalchemy.orm.attributes import flag_modified
 
 class Consult:
     def __init__(self):
@@ -131,7 +132,9 @@ class Consult:
             if record:
                 current_history = record.chat_history or []
                 current_history.extend([user_msg_obj, assistant_msg_obj])
-                db_operations.update_record(record, {'chat_history': current_history})
+                record.chat_history = current_history
+                flag_modified(record, "chat_history")
+                db.session.commit()
             else: 
                 new_history = [user_msg_obj, assistant_msg_obj]
                 data = {

@@ -18,50 +18,52 @@ load_dotenv()
 
 report_bp = Blueprint('report', __name__)
 
+# user_detection_history = {}
+
 UPLOAD_FOLDER = os.getenv("SLICE_SAVE_PATH", "uploads/slices")
 VIDEO_FOLDER = os.getenv("VIDEO_SAVE_PATH", "uploads/videos")
 
 @report_bp.route('/detect_upper_body', methods=['POST'])
 def detect_upper_body():
-    if 'detection_history' not in session:
-        session['detection_history'] = {'consecutive_false_count': 0}
-
-    detector = current_app.pose_inferencer
-
+    detector = current_app.upper_body_detector
     if detector is None:
-        return jsonify({"error": "Pose detection model is not available."}), 503
+        return jsonify({"error": "Upper body detector is not available."}), 503
+
+    user_id = request.form.get('user_id')
+
+    # if user_id not in user_detection_history:
+    #     user_detection_history[user_id] = {'consecutive_false_count': 0}
 
     if 'image' not in request.files:
         return jsonify({"error": "No image file provided."}), 400
-    
+
     file = request.files['image']
-    if not file or not file.filename:
+    if file.filename == '':
         return jsonify({"error": "No selected file"}), 400
 
     try:
         nparr = np.frombuffer(file.read(), np.uint8)
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-        result_generator = detector(img, show=False)
-        result = next(result_generator)
+        if img is None:
+            return jsonify({"error": "Could not decode image."}), 400
+
+        current_detection = detector.detect(img)
         
-        current_detection = bool(result['predictions'] and result['predictions'][0])
+        return jsonify({"is_upper_body_in_frame": current_detection}), 200
+        # if not current_detection:
+        #     user_detection_history[user_id]['consecutive_false_count'] += 1
+        # else:
+        #     user_detection_history[user_id]['consecutive_false_count'] = 0
         
-        user_history = session['detection_history']
-        if not current_detection:
-            user_history['consecutive_false_count'] += 1
-        else:
-            user_history['consecutive_false_count'] = 0
-        
-        response_value = False if user_history['consecutive_false_count'] >= 2 else True
-        session['detection_history'] = user_history
-        session.modified = True
-        
-        return jsonify({"is_upper_body_in_frame": response_value}), 200
+        # consecutive_false_count = user_detection_history[user_id]['consecutive_false_count']
+        # response_value = False if consecutive_false_count >= 2 else True
+
+        # return jsonify({"is_upper_body_in_frame": response_value}), 200
 
     except Exception as e:
         current_app.logger.error(f"Error during detection: {e}", exc_info=True)
-        return jsonify({"error": "Internal server error"}), 500
+        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
 
 @report_bp.route('/reports/upload_sprites', methods=['POST'])
 def upload_sprite_sheet():
@@ -103,7 +105,7 @@ def upload_sprite_sheet():
             slice_order=slice_order_start + i,
             image_path=db_relative_path,
             timestamp=datetime.now(),
-            is_part_of_action=(frame_results == 1)
+            is_part_of_action=(all(x == 1 for x in frame_results))
         )
         db.session.add(slice_image)
         saved_files_info.append(db_relative_path)
@@ -158,3 +160,7 @@ def summarize_and_save_report(record_id):
     except Exception as e:
         current_app.logger.error(f"An unexpected error in summarize_and_save_report: {e}")
         return jsonify({"error": f"An unexpected server error occurred: {str(e)}"}), 500
+        
+@report_bp.route('/videos/<path:filename>')
+def serve_video(filename):
+    return send_from_directory(VIDEO_FOLDER, filename)
