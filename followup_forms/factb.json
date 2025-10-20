@@ -1,7 +1,7 @@
 {
     "form_id": "FACT-B_Version4_Chinese",
     "form_name": "乳腺癌功能评价量表 (FACT-B)",
-    "instructions": "根据问答内容合理组织问题提问顺序。可以合并问题提问以减少问答时间，单次合并问题个数不超过3个。适时鼓励患者完成问卷。",
+    "instructions": "根据问答内容合理组织问题提问顺序。可以合并问题提问以减少问答时间，单次合并问题个数不超过2个。适时鼓励患者完成问卷。",
     "scoring_rules": {
         "physical_wellbeing": {
             "formula": "[((4 - GP1) + (4 - GP2) + (4 - GP3) + (4 - GP4) + (4 - GP5) + (4 - GP6) + (4 - GP7)) * 7 / n]",

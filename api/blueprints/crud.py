@@ -4,7 +4,7 @@ import numpy as np
 import cv2
 from flask import Blueprint, jsonify, request
 from datetime import datetime, date, timedelta
-from sqlalchemy import and_, func
+from sqlalchemy import func, case, desc, and_
 from dotenv import load_dotenv
 import requests
 load_dotenv()
@@ -1601,4 +1601,79 @@ def get_user_recovery_plan_exercises(user_id):
 
     except Exception as e:
         print(f"Error in get_user_recovery_plan_exercises for user {user_id}: {e}")
+        return jsonify({"error": "服务器内部错误"}), 500
+
+@crud_bp.route('/users/<int:user_id>/progress_summary', methods=['GET'])
+def get_user_progress_summary(user_id):
+    """获取用户健康记录页面的所有统计数据。"""
+    try:
+        # 1. 日历标记：锻炼过的日子和次数
+        recovery_dates = db.session.query(
+            func.date(RecoveryRecord.record_date).label('date'),
+            func.count(RecoveryRecord.record_id).label('count')
+        ).filter(
+            RecoveryRecord.user_id == user_id
+        ).group_by(func.date(RecoveryRecord.record_date)).all()
+
+        markers = [{
+            'year': r.date.year,
+            'month': r.date.month,
+            'day': r.date.day,
+            'type': 'solar',
+            'text': f'{r.count}次'
+        } for r in recovery_dates]
+
+        # 2. AI动作评估：最近一次锻炼记录的平均分
+        latest_record = db.session.query(RecoveryRecord).filter(
+            RecoveryRecord.user_id == user_id
+        ).order_by(desc(RecoveryRecord.record_date)).first()
+
+        ai_evaluation_score = '-'
+        if latest_record:
+            details = db.session.query(RecoveryRecordDetail).filter(
+                RecoveryRecordDetail.record_id == latest_record.record_id,
+                RecoveryRecordDetail.evaluation_details.isnot(None)
+            ).all()
+
+            scores = []
+            for detail in details:
+                try:
+                    evaluation = json.loads(detail.evaluation_details)
+                    if 'score' in evaluation:
+                        scores.append(evaluation['score'])
+                except (json.JSONDecodeError, TypeError):
+                    continue
+            
+            if scores:
+                ai_evaluation_score = round(sum(scores) / len(scores), 1)
+
+
+        # 3. 锻炼总天数
+        total_training_days = len(recovery_dates)
+
+        # 4. 生活质量得分
+        latest_qol = db.session.query(QoL).filter(
+            QoL.user_id == user_id
+        ).order_by(desc(QoL.submission_time)).first()
+
+        quality_of_life_score = '-'
+        if latest_qol and latest_qol.result and 'scoring_result' in latest_qol.result:
+            score_sum = 0
+            for item in latest_qol.result['scoring_result']:
+                if item.get('module_name') in [
+                    "physical_wellbeing", "social_family_wellbeing", 
+                    "emotional_wellbeing", "functional_wellbeing", "additional_concerns"
+                ] and isinstance(item.get('value'), (int, float)):
+                    score_sum += item.get('value')
+            quality_of_life_score = round(score_sum,1)
+
+        return jsonify({
+            "markers": markers,
+            "aiEvaluation": ai_evaluation_score,
+            "totalTrainingDays": f"{total_training_days}天",
+            "qualityOfLife": quality_of_life_score
+        })
+
+    except Exception as e:
+        print(f"Error in get_user_progress_summary for user {user_id}: {e}")
         return jsonify({"error": "服务器内部错误"}), 500

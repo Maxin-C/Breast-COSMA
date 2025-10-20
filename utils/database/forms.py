@@ -53,7 +53,7 @@ class ExerciseForm(FlaskForm):
     description = TextAreaField('Description', validators=[Optional()])
     video_url = StringField('Video URL', validators=[Optional(), Length(max=255)])
     image_url = StringField('Image URL', validators=[Optional(), Length(max=255)])
-    duration_minutes = IntegerField('Duration (Minutes)', validators=[Optional(), NumberRange(min=0)])
+    duration_seconds = IntegerField('Duration (Seconds)', validators=[Optional(), NumberRange(min=0)])
     repetitions = IntegerField('Repetitions', validators=[Optional(), NumberRange(min=0)])
 
 class UserRecoveryPlanForm(FlaskForm):

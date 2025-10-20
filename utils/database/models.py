@@ -55,7 +55,7 @@ class Exercise(Base):
     description = db.Column(db.Text)
     video_url = db.Column(db.String(255))
     image_url = db.Column(db.String(255))
-    duration_minutes = db.Column(db.Integer)
+    duration_seconds = db.Column(db.Integer)
     repetitions = db.Column(db.Integer)
 
     recovery_record_details = db.relationship('RecoveryRecordDetail', backref='exercise', lazy=True)
