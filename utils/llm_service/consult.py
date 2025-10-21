@@ -217,12 +217,16 @@ class Consult:
             print(f"Error extracting follow-up results: {e}")
             return None
 
+    def _get_user_chat_history(self, history):
+        content = ""
+        for h in history:
+            if h['role'] == 'user':
+                content += h['content'] + '\n'
+        return content
+
     def chat_consult(self, user_id: int, query: str, conversation_id: Optional[str] = None) -> Dict[str, Any]:
         if not conversation_id:
             conversation_id = str(uuid.uuid4())
-
-        retrieved_docs = self.retriever.search(query)
-        prompt_with_rag = self._build_prompt_with_rag(query, retrieved_docs)
 
         messages = [{"role": "system", "content": self.default_system_message}]
         
@@ -232,6 +236,14 @@ class Consult:
         
         history = self._get_conversation_history(conversation_id)
         messages.extend(history)
+
+        prompt_with_rag = query
+        if query == '你好':
+            prompt_with_rag = query
+            retrieved_docs = []
+        else:
+            retrieved_docs = self.retriever.search(f"问题：{query}；历史对话：{self._get_user_chat_history(history)}")
+            prompt_with_rag = self._build_prompt_with_rag(query, retrieved_docs)
         
         messages.append({"role": "user", "content": prompt_with_rag})
 

@@ -70,7 +70,7 @@ def upload_sprite_sheet():
         return jsonify({'error': 'Exercise not found or duration not set'}), 404
     T = exercise.duration_seconds
 
-    P = (T - 4) / 4
+    P = (T + 4) / 4
     if P < 8: P *= 2
     elif P > 20: P /= 2
     
