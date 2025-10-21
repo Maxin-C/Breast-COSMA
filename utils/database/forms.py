@@ -89,6 +89,8 @@ class RecoveryRecordDetailForm(FlaskForm):
     evaluation_details = TextAreaField('AI Evaluation Result', validators=[Optional()])
     completion_timestamp = DateTimeField('Completion Timestamp (YYYY-MM-DD HH:MM:SS)', format='%Y-%m-%d %H:%M:%S', validators=[Optional()])
     video_path = StringField('Video Path', validators=[Optional(), Length(max=255)])
+    slice_evaluations = TextAreaField('Slice Evaluations', validators=[Optional()])
+    last_feedback_timestamp = DateTimeField('Last Feedback Timestamp', format='%Y-%m-%d %H:%M:%S', validators=[Optional()]) # Add this line
 
 class ChatHistoryForm(FlaskForm):
     message_id = IntegerField('Message ID', validators=[Optional()])

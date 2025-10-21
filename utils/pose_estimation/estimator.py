@@ -17,7 +17,6 @@ from transformers.utils import logging
 logger = logging.get_logger("transformers")
 logger.setLevel(logging.ERROR)
 
-
 class MotionToPromptProjector(nn.Module):
     def __init__(self, feature_dim, bottleneck_dim, activation='gelu'):
         super().__init__()
@@ -234,6 +233,7 @@ class ClipSeq(nn.Module):
         outputs = logits.view(batch_size, num_frames, 2)
         return outputs
 
+
 class Estimator:
     def __init__(self, config: Dict, pose_inferencer: MMPoseInferencer):
         self.config = SimpleNamespace(**config)
@@ -267,7 +267,6 @@ class Estimator:
 
         descs = [data['desc'] for data in self.label_info]
         self.desc_inputs = self.clip_processor(text=descs, return_tensors="pt", padding=True, truncation=True).to(self.device)
-        # self.desc_inputs = {k: v.to(self.device) for k, v in self.desc_inputs.items()}
 
     @staticmethod
     def _calculate_angle_batch(a, b, c):
@@ -304,9 +303,6 @@ class Estimator:
         ], axis=1)
 
     def _split_sprite_sheet(self, sprite_image: Image.Image) -> List[Image.Image]:
-        # if sprite_image.width % 3 != 0 or sprite_image.height % 2 != 0:
-        #     raise ValueError("Sprite sheet dimensions must be divisible by 3 (width) and 2 (height).")
-        
         img_width = sprite_image.width // 3
         img_height = sprite_image.height // 2
         frames = []
@@ -323,9 +319,19 @@ class Estimator:
     def _extract_skeletons(self, frames: List[Image.Image]) -> torch.Tensor:
         frame_arrays = [np.array(frame.convert('RGB')) for frame in frames]
         
+        if not frame_arrays:
+            return torch.empty((0, 43)).unsqueeze(0).to(torch.float32)
+
         result_generator = self.mmpose_inferencer(frame_arrays, show=False, save_results=False, batch_size=len(frames))
-        results = [res for res in result_generator]
         
+        results = []
+        try:
+            for res in result_generator:
+                results.append(res)
+        except Exception as e:
+            print(f"Error during MMPose inference: {e}")
+            return torch.empty((0, 43)).unsqueeze(0).to(torch.float32)
+
         keypoints_list = []
         for frame_result in results:
             predictions = frame_result.get('predictions', [])
@@ -352,6 +358,11 @@ class Estimator:
             frames = self._split_sprite_sheet(sprite_image)
             
             skeletons_tensor = self._extract_skeletons(frames).to(self.device)
+
+            if skeletons_tensor.shape[1] == 0:
+                print("Warning: No skeletons were extracted from the frames. Prediction cannot proceed.")
+                # Return a list of 0s, indicating no action detected for any frame.
+                return [0] * len(frames)
             
             images_processed = self.clip_processor(images=frames, return_tensors="pt", padding=True)
             images_tensor = images_processed['pixel_values'].to(self.device)
@@ -370,25 +381,3 @@ class Estimator:
             result_array = predictions.squeeze(0).cpu().tolist()
         
         return result_array
-
-# if __name__ == '__main__':
-#     config = {
-#         "device": "cuda:0",
-#         "clip_model_path": "/root/huggingface/openai/clip-vit-large-patch14",
-#         "trained_model_path": "utils/pose_estimation/model_dict/model_20250716_032346_acc76.46.pth",
-#         "label_info_path": "utils/pose_estimation/motion_desc.json",
-#         "model_config_path": "utils/pose_estimation/model_config.json",
-#         "mmpose_config_path": "utils/pose_estimation/mmpose_config.json"
-#     }
-
-#     classifier_service = Estimator(config)
-#     sample_sprite_path = "/var/codes/Breast-COMA-Rehab/uploads/slices/1_1755648889472_sprite_sheet.png"
-    
-#     target_class_id = 1
-#     sample_sprite_image = Image.open(sample_sprite_path)
-#     results = classifier_service.predict(sample_sprite_image, target_class_id)
-
-#     for i, res in enumerate(results):
-#         status = "属于" if res == 1 else "不属于"
-#         print(f"Frame {i+1}: {status} '{target_class_id}'")
-#     print(f"\nRaw output array: {results}")

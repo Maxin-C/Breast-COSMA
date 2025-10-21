@@ -4,7 +4,7 @@ import os
 import cv2
 import time
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 import base64
 
 from openai import OpenAI
@@ -20,7 +20,7 @@ class ReportGenerator:
         self.db_session = db_session
         
         self.api_key = os.getenv("QWEN_API_KEY")
-        self.vl_model_name = os.getenv("QWEN_VL_MODEL_NAME", "qwen3-vl-plus")
+        self.vl_model_name = os.getenv("QWEN_VL_MODEL_NAME", "qwen-vl-plus")
         
         self.client = OpenAI(
             api_key=os.getenv("QWEN_API_KEY"),
@@ -35,6 +35,87 @@ class ReportGenerator:
         self.max_file_size_bytes = max_file_size_mb * 1024 * 1024
         
         os.makedirs(self.video_save_path, exist_ok=True)
+
+    def generate_slice_video_feedback(self, record_id: int, exercise_id: int, start_time: datetime, end_time: datetime) -> str:
+
+        image_slices = self.db_session.query(VideoSliceImage).filter(
+            VideoSliceImage.record_id == record_id,
+            VideoSliceImage.exercise_id == exercise_id,
+            VideoSliceImage.timestamp.between(start_time, end_time)
+        ).filter(
+            or_(
+                VideoSliceImage.is_part_of_action == True,
+                VideoSliceImage.is_part_of_action.is_(None)
+            )
+        ).order_by(VideoSliceImage.timestamp).all()
+
+        if not image_slices:
+            return "在指定时间段内未找到可分析的动作图片。"
+
+        all_frames = [frame for s in image_slices if os.path.exists(s.image_path) for frame in self._extract_frames_from_sprite(s.image_path)]
+        if not all_frames:
+            return "无法从有效的图片路径中提取任何帧。"
+
+        temp_video_filename = f"temp_feedback_{record_id}_{exercise_id}_{int(time.time())}.mp4"
+        temp_video_filepath = os.path.join(self.video_save_path, temp_video_filename)
+        
+        try:
+            height, width, _ = all_frames[0].shape
+            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            video_writer = cv2.VideoWriter(temp_video_filepath, fourcc, self.fps_for_video_eval, (width, height))
+            for frame in all_frames:
+                video_writer.write(frame)
+            video_writer.release()
+        except Exception as e:
+            print(f"[Error] 创建临时反馈视频失败: {e}")
+            return "创建分析视频失败。"
+
+        exercise_description = self.exercise_desc[exercise_id]
+
+        system_prompt = (
+            "你是一名专业的康复治疗师，请根据上传的短视频片段和标准动作描述，面向正在锻炼的乳腺癌患者给出反馈。你的反馈应该是鼓励性的，并指出一个可以立即改进的关键点。语气轻松并且口语化。反馈需简短，限制在20字以内。"
+        )
+        user_prompt = f"**标准动作描述**：{exercise_description['name']}：{exercise_description['desc']}\n**患者当前动作片段**："
+
+        try:
+            with open(temp_video_filepath, "rb") as video_file:
+                base64_video = base64.b64encode(video_file.read()).decode("utf-8")
+            video_data_uri = f"data:video/mp4;base64,{base64_video}"
+        except Exception as e:
+            print(f"读取临时视频失败: {e}")
+            return "读取分析视频失败。"
+        finally:
+            if os.path.exists(temp_video_filepath):
+                os.remove(temp_video_filepath)
+
+        messages = [
+            {
+                "role": "system",
+                "content": system_prompt
+            },
+            {
+                'role': 'user',
+                'content': [
+                    {'video': video_data_uri},
+                    {'text': user_prompt}
+                ]
+            }
+        ]
+        
+        try:
+            response = MultiModalConversation.call(model=self.vl_model_name, api_key=self.api_key, messages=messages)
+            if response.status_code == 200:
+                content_list = response.output.choices[0].message.get("content", [])
+                feedback = ""
+                for part in content_list:
+                    if isinstance(part, dict) and 'text' in part:
+                        feedback = part['text']
+                        break
+                return feedback or "未能生成有效的反馈。"
+            else:
+                return f"API调用失败: Code={response.status_code}, Message={response.message}"
+        except Exception as e:
+            return f"调用模型时发生未知错误: {e}"
 
     def _extract_frames_from_sprite(self, image_path: str) -> List[Any]:
         try:

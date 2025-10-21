@@ -101,6 +101,8 @@ class RecoveryRecordDetail(Base):
     evaluation_details = db.Column(db.Text)
     completion_timestamp = db.Column(db.DateTime)
     video_path = db.Column(db.String(255))
+    slice_evaluations = db.Column(db.JSON)
+    last_feedback_timestamp = db.Column(db.DateTime)
 
 # class MessageChat(Base):
 #     __tablename__ = 'messages_chat'
