@@ -3,27 +3,27 @@
     "form_name": "乳腺癌功能评价量表 (FACT-B)",
     "instructions": "根据问答内容合理组织问题提问顺序。可以合并问题提问以减少问答时间，单次合并问题个数不超过2个。适时鼓励患者完成问卷。",
     "scoring_rules": {
-        "physical_wellbeing": {
+        "生理状况": {
             "formula": "[((4 - GP1) + (4 - GP2) + (4 - GP3) + (4 - GP4) + (4 - GP5) + (4 - GP6) + (4 - GP7)) * 7 / n]",
             "is_optional": false,
             "description": "Calculated for section physical_wellbeing. ''n'' is the number of completed responses. GP1, GP2, ..., GP7 are the id of questions."
         },
-        "social_family_wellbeing": {
+        "社会家庭状况": {
             "formula": "[(GS1 + GS2 + GS3 + GS4 + GS5 + GS6) * 6 / n]",
             "is_optional": false,
             "description": "Calculated for section social_family_wellbeing. ''n'' is the number of completed responses. GS1, GS2, ..., GS6 are the id of questions."
         },
-        "emotional_wellbeing": {
+        "情感状况": {
             "formula": "[((4 - GE1) + GE2 + (4 - GE3) + (4 - GE4) + (4 - GE5) + (4 - GE6)) * 6 / n]",
             "is_optional": false,
             "description": "Calculated for section emotional_wellbeing. ''n'' is the number of completed responses. GE1, GE2, ..., GE6 are the id of questions."
         },
-        "functional_wellbeing": {
+        "功能状况": {
             "formula": "[(GF1 + GF2 + GF3 + GF4 + GF5 + GF6 + GF7) * 7 / n]",
             "is_optional": false,
             "description": "Calculated for section functional_wellbeing. ''n'' is the number of completed responses. GF1, GF2, ..., GF7 are the id of questions."
         },
-        "additional_concerns": {
+        "附加关注": {
             "formula": "[((4 - B1) + (4 - B2) + (4 - B3) + B4 + (4 - B5) + (4 - B6) + (4 - B7) + (4 - B8) + B9 + (4 - P2)) * 10 / n]",
             "is_optional": false,
             "description": "Calculated for section additional_concerns. ''n'' is the number of completed responses. B1, B2, ..., P2 are the id of questions."

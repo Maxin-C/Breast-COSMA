@@ -1661,8 +1661,8 @@ def get_user_progress_summary(user_id):
             score_sum = 0
             for item in latest_qol.result['scoring_result']:
                 if item.get('module_name') in [
-                    "physical_wellbeing", "social_family_wellbeing", 
-                    "emotional_wellbeing", "functional_wellbeing", "additional_concerns"
+                    "生理状况", "社会家庭状况", 
+                    "情感状况", "功能状况", "附加关注"
                 ] and isinstance(item.get('value'), (int, float)):
                     score_sum += item.get('value')
             quality_of_life_score = round(score_sum,1)

@@ -3,18 +3,18 @@
   "form_name": "上肢功能受损程度问卷(简短版) - Chinese QuickDASH",
   "instructions": "根据问答内容合理组织问题提问顺序。可以合并问题提问以减少问答时间，单次合并问题个数不超过2个。适时鼓励患者完成问卷。",
   "scoring_rules": {
-    "disability_symptom_score": {
-      "formula": "[((q1 + q2 + q3 + q4 + q5 + q6 + q7 + q8 + q9 + q10 + q11)/ n) - 1) * 25]",
+    "DASH 受损程度/症状评分": {
+      "formula": "[((q1 + q2 + q3 + q4 + q5 + q6 + q7 + q8 + q9 + q10 + q11)/ n - 1) * 25]",
       "is_optional": false,
       "description": "Calculated for Part I and II. ''n'' is the number of completed responses. May not be calculated if more than 1 item is missing. q1, q2, ..., q11 are the id of quetions"
     },
-    "work_module": {
-      "formula": "[((sum_of_scores / 4) - 1) * 25]",
+    "DASH 工作能力评分": {
+      "formula": "[((q12 + q13 + q14 + q15 ) / 4 - 1) * 25]",
       "is_optional": true,
       "description": "Optional module score. May not be calculated if any item is missing."
     },
-    "sports_music_module": {
-      "formula": "[((sum_of_scores / 4) - 1) * 25]",
+    "DASH 运动/音乐评分": {
+      "formula": "[((q16 + q17 + q18 + q19 ) / 4 - 1) * 25]",
       "is_optional": true,
       "description": "Optional module score. May not be calculated if any item is missing."
     }

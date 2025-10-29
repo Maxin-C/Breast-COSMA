@@ -1,5 +1,9 @@
-from flask import Blueprint, request, jsonify, current_app
+import os
+from flask import Blueprint, request, jsonify, current_app, url_for
+import uuid
 from api.extensions import db
+import dashscope
+from dashscope.audio.tts import SpeechSynthesizer
 from utils.database.models import ChatHistory
 
 consult_bp = Blueprint('consult', __name__)
@@ -76,3 +80,47 @@ def get_user_consult_context():
     except Exception as e:
         current_app.logger.error(f"Error in get_user_consult_context: {e}")
         return jsonify({'error': 'An internal error occurred'}), 500
+
+@consult_bp.route('/consult/tts', methods=['POST'])
+def text_to_speech():
+    data = request.json
+    if not data or 'text' not in data:
+        return jsonify({'error': 'Field "text" is required'}), 400
+
+    text_to_synthesize = data['text']
+    if not text_to_synthesize:
+        return jsonify({'error': 'Text cannot be empty'}), 400
+
+    dashscope.api_key = os.getenv("QWEN_API_KEY")
+    tts_dir = os.getenv("TTS_SAVE_PATH", "static/tts")
+
+    os.makedirs(tts_dir, exist_ok=True)
+
+    filename = f"tts_{uuid.uuid4()}.mp3"
+    filepath = os.path.join(tts_dir, filename)
+
+    try:
+        result = SpeechSynthesizer.call(model='sambert-zhishuo-v1',
+            text=text_to_synthesize,
+            sample_rate=48000,
+            format='mp3'
+        )
+
+        audio = result.get_audio_data()
+        if audio is None:
+            current_app.logger.error("Dashscope TTS returned no audio data.")
+            return jsonify({'error': 'TTS synthesis failed.'}), 500
+        with open(filepath, 'wb') as f:
+            f.write(audio)
+
+        audio_url_path = url_for('static', filename=f'tts/{filename}')
+
+        return jsonify({
+            'audio_url': audio_url_path
+        }), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Error in TTS synthesis: {e}")
+        if os.path.exists(filepath):
+            os.remove(filepath)
+        return jsonify({'error': 'An internal error occurred during TTS synthesis'}), 500
