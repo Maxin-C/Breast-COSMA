@@ -1,0 +1,473 @@
+/* static/css/style.css */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+:root {
+    --bg-color: #f0f2f5;
+    --sidebar-bg: #2b4f60;
+    --main-text-color: #333;
+    --sub-text-color: #666;
+    --card-bg: #ffffff;
+    --border-radius: 12px;
+    --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    --pie-color-1: #558D92;
+    --pie-color-2: #69ABB2;
+    --pie-color-3: #B1CED1;
+    --pie-color-4: #d3d3d3;
+    --line-color: #e8635b;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Noto Sans SC', sans-serif;
+    background-color: var(--bg-color);
+    color: var(--main-text-color);
+    -webkit-font-smoothing: antialiased;
+}
+
+.app-container {
+    display: flex;
+    width: 100%;
+    min-height: 100vh;
+}
+
+/* Sidebar Styles */
+.sidebar {
+    width: 80px;
+    background-color: var(--sidebar-bg);
+    padding: 20px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.sidebar-logo {
+    color: white;
+    font-size: 28px;
+    margin-bottom: 40px;
+}
+
+.sidebar-nav ul {
+    list-style-type: none;
+}
+
+.sidebar-nav li {
+    margin-bottom: 25px;
+    margin-left: -35px;
+}
+
+/* 使用高优先级选择器并强制应用Flexbox居中 */
+.sidebar .sidebar-nav a {
+    color: #a7b5bd;
+    font-size: 24px;
+    text-decoration: none;
+    width: 45px;
+    height: 45px;
+    border-radius: var(--border-radius);
+    transition: all 0.3s ease;
+    
+    /* 使用 !important 强制覆盖 Bootstrap 样式 */
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+
+.sidebar .sidebar-nav li.active a,
+.sidebar .sidebar-nav a:hover {
+    background-color: #4a90e2;
+    color: white;
+}
+
+/* Main Content Styles */
+.main-content {
+    flex: 1;
+    padding: 30px 40px;
+}
+
+.header h1 {
+    font-size: 24px;
+    font-weight: 500;
+}
+
+.header p {
+    font-size: 14px;
+    color: var(--sub-text-color);
+    margin-top: 5px;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 30px;
+    margin-top: 25px;
+}
+
+/* Charts Styles */
+.charts-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    background: var(--card-bg);
+    padding: 25px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+}
+
+.chart-card h3 {
+    font-size: 16px;
+    font-weight: 500;
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.chart-box {
+    width: 100%;
+    height: 250px;
+}
+
+/* Overview Styles */
+.overview-container .overview-card {
+    background: var(--card-bg);
+    padding: 25px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    height: 100%;
+}
+
+.overview-card h2 {
+    font-size: 18px;
+    font-weight: 500;
+    margin-bottom: 30px;
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 35px;
+}
+
+.info-item .icon-bg {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    margin-right: 20px;
+    background-color: #e8f0fe;
+    color: #4a90e2;
+}
+
+.info-text .value {
+    font-size: 28px;
+    font-weight: bold;
+    display: block;
+}
+.info-text .unit {
+    font-size: 16px;
+    font-weight: normal;
+    margin-left: 4px;
+}
+
+.info-text .label {
+    font-size: 14px;
+    color: var(--sub-text-color);
+}
+
+/* static/css/style.css */
+
+/* --- 在文件末尾追加以下代码 --- */
+
+/* 内容卡片统一样式 */
+.content-card {
+    background: var(--card-bg);
+    padding: 30px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+}
+
+.content-card h2 {
+    font-size: 18px;
+    font-weight: 500;
+}
+
+/* 自定义表格样式 */
+.custom-table {
+    min-width: 800px; /* 防止在小屏幕上过度压缩 */
+}
+
+.custom-table thead th {
+    font-weight: 500;
+    color: var(--sub-text-color);
+    border-bottom-width: 1px;
+    text-align: center; /* 表头居中 */
+}
+
+.custom-table tbody td, .custom-table tbody th {
+    text-align: center; /* 内容居中 */
+    vertical-align: middle;
+}
+
+/* 评估结果状态颜色 */
+.status-excellent {
+    color: #28a745; /* 绿色 */
+    font-weight: bold;
+}
+
+.status-good {
+    color: #fd7e14; /* 橙色 */
+    font-weight: bold;
+}
+
+.status-poor {
+    color: #dc3545; /* 红色 */
+    font-weight: bold;
+}
+
+.status-null {
+    color: #a5a5a5; /* 灰色 */
+    font-weight: bold;
+}
+
+/* 病例详情页 - 三栏网格布局 */
+.case-detail-grid {
+    display: grid;
+    grid-template-columns: 280px 1fr 1fr; /* 左侧固定宽度，中间和右侧自适应 */
+    gap: 24px;
+    height: calc(100vh - 120px); /* 让网格高度占满屏幕可视区域 */
+}
+
+/* 左侧视频列表 */
+.patient-info {
+    border-bottom: 1px solid #eee;
+}
+
+.video-list-container {
+    overflow-y: auto; /* 实现滚动 */
+    flex-grow: 1;
+}
+
+.video-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-decoration: none;
+    color: var(--main-text-color);
+    border-bottom: 1px solid #eee;
+    transition: background-color 0.2s ease;
+}
+.video-list-item:hover {
+    background-color: #f8f9fa;
+}
+.video-list-item.active {
+    background-color: #e4f3e9; /* 选中的绿色 */
+    color: #198754;
+    font-weight: bold;
+}
+.video-list-item.active .fa-chevron-right {
+    opacity: 1;
+}
+.video-list-item .fa-chevron-right {
+    opacity: 0.5;
+}
+
+
+/* 中间视频播放器 */
+.video-player-wrapper {
+    flex-grow: 1; /* 让播放器容器填满剩余空间 */
+    background-color: #f0f2f5;
+    border-radius: var(--border-radius);
+}
+
+
+/* 右侧报告与反馈 */
+.report-content-box {
+    overflow-y: auto; /* 实现滚动 */
+    flex-grow: 1;
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    min-height: 150px;
+    line-height: 1.6;
+}
+
+/* 评分条样式 */
+.rating-scale {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.rating-scale i {
+    font-size: 1.2rem;
+    color: #6c757d;
+}
+.rating-item {
+    display: inline-block;
+}
+.rating-item input[type="radio"] {
+    display: none; /* 隐藏原始的radio按钮 */
+}
+.rating-item label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 1px solid #ced4da;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.rating-item input[type="radio"]:checked + label {
+    background-color: #0d6efd;
+    color: white;
+    border-color: #0d6efd;
+}
+
+/* --- Login Page Styles --- */
+.login-body {
+    background-color: #f0f4f8;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+.login-container {
+    display: flex;
+    width: 900px;
+    height: 500px;
+    background: #fff;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    border-radius: 10px;
+    overflow: hidden;
+}
+.login-box {
+    background-color: #5dbdb2; /* 主题绿色 */
+    color: white;
+    padding: 50px;
+    width: 50%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+.login-title {
+    font-size: 24px;
+    font-weight: 500;
+}
+.login-subtitle {
+    font-size: 16px;
+    font-weight: 300;
+}
+.login-form {
+    margin-top: 30px;
+}
+.form-group {
+    margin-bottom: 20px;
+}
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 300;
+}
+.input-wrapper {
+    position: relative;
+}
+.input-wrapper i {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #ccc;
+}
+.input-wrapper input {
+    width: 100%;
+    padding: 12px 15px 12px 45px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background: #fff;
+}
+.login-button {
+    width: 100%;
+    padding: 12px;
+    background-color: #fff;
+    color: #5dbdb2;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+.login-button:hover {
+    background-color: #f0f0f0;
+}
+.error-message {
+    color: #ffdddd;
+    margin-top: 15px;
+    text-align: center;
+}
+.login-branding {
+    width: 50%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 50px;
+    text-align: center;
+}
+.login-branding h1 {
+    font-size: 22px;
+    color: #333;
+}
+.login-branding p {
+    color: #666;
+}
+
+/* --- 新的 Case Detail 左侧边栏样式 --- */
+.fixed-height-sidebar {
+    /* 与 .case-detail-grid 的 height 保持一致 */
+    height: calc(100vh - 120px); 
+}
+
+.accordion-container {
+    overflow-y: auto; /* 这是实现滚动的关键 */
+}
+
+/* 二级菜单项样式 */
+.sub-list-item {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    padding: 0.75rem 1.25rem;
+    font-size: 0.9rem;
+}
+
+.sub-list-item:hover {
+    background-color: #f8f9fa; /* 悬停时浅灰色背景 */
+}
+
+/* 选中状态的二级菜单项 */
+.sub-list-item.active {
+    background-color: #e4f3e9; /* 浅绿色背景 */
+    color: #198754; /* 深绿色文字 */
+    font-weight: 500;
+    border-left: 3px solid #198754; /* 左侧绿色边框提示 */
+    padding-left: calc(1.25rem - 3px);
+}
+
+.custom-table th.sortable {
+    cursor: pointer;
+    user-select: none; /* 防止双击时选中文本 */
+}
+.custom-table th.sortable:hover {
+    background-color: #f8f9fa;
+}
+.custom-table th.sortable i {
+    margin-left: 5px;
+    color: #aaa;
+}

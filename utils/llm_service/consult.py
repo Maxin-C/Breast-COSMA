@@ -46,9 +46,9 @@ class Consult:
                 conversation_id = None 
 
         if is_follow_up_mode:
-            response = self.chat_followup(user_id=user_id, user_query=query, conversation_id=conversation_id)
+            response = self.chat_followup(user_id=user_id, user_query=query, conversation_id=conversation_id, end_conversation=end_conversation)
         else:
-            response = self.chat_consult(user_id=user_id, query=query, conversation_id=conversation_id)
+            response = self.chat_consult(user_id=user_id, query=query, conversation_id=conversation_id, end_conversation=end_conversation)
         
         final_conversation_id = response.get('conversation_id')
 
@@ -224,9 +224,16 @@ class Consult:
                 content += h['content'] + '\n'
         return content
 
-    def chat_consult(self, user_id: int, query: str, conversation_id: Optional[str] = None) -> Dict[str, Any]:
+    def chat_consult(self, user_id: int, query: str, conversation_id: Optional[str] = None, end_conversation: bool = False) -> Dict[str, Any]:
         if not conversation_id:
             conversation_id = str(uuid.uuid4())
+        
+        if end_conversation:
+            return {
+                'response': "",
+                'conversation_id': conversation_id,
+                'timestamp': datetime.now().isoformat()
+            }
 
         messages = [{"role": "system", "content": self.default_system_message}]
         
@@ -272,9 +279,17 @@ class Consult:
                 'conversation_id': conversation_id
             }
     
-    def chat_followup(self, user_id: int, user_query: str, conversation_id: Optional[str]) -> Dict[str, Any]:
+    def chat_followup(self, user_id: int, user_query: str, conversation_id: Optional[str], end_conversation: bool = False) -> Dict[str, Any]:
         if not conversation_id:
             conversation_id = str(uuid.uuid4())
+
+        if end_conversation:
+            return {
+                'response': "",
+                'conversation_id': conversation_id,
+                'timestamp': datetime.now().isoformat(),
+                'followup_complete': False
+            }
             
         if not self.follow_up_forms:
             print("Error: Follow-up forms are not loaded in the Consult service.")

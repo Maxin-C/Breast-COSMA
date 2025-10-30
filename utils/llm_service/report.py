@@ -1,11 +1,13 @@
+# 建议将此类保存在 services/report_generator.py
+
 import os
 import cv2
 import time
 import json
 from datetime import datetime, timedelta
 import base64
-import numpy as np 
-import imageio
+import numpy as np  # 确保导入 numpy
+import imageio      # 导入 imageio
 
 from openai import OpenAI
 import dashscope
@@ -37,7 +39,7 @@ class ReportGenerator:
         os.makedirs(self.video_save_path, exist_ok=True)
 
     def generate_slice_video_feedback(self, record_id: int, exercise_id: int, start_time: datetime, end_time: datetime) -> str:
-        # ... (前面的数据库查询逻辑保持不变) ...
+        # ... (数据库查询逻辑不变) ...
         image_slices = self.db_session.query(VideoSliceImage).filter(
             VideoSliceImage.record_id == record_id,
             VideoSliceImage.exercise_id == exercise_id,
@@ -60,19 +62,27 @@ class ReportGenerator:
         temp_video_filepath = os.path.join(self.video_save_path, temp_video_filename)
         
         # ------------------------------------------------------------------
-        # 变更 1: 替换 generate_slice_video_feedback 中的 cv2.VideoWriter
+        # 变更: 修正 generate_slice_video_feedback 的奇数尺寸问题
         # ------------------------------------------------------------------
         try:
-            height, width, _ = all_frames[0].shape
-            print(f"[Debug] 正在创建临时反馈视频 (imageio): {temp_video_filepath}")
+            # 1. 获取原始的 (可能是奇数的) 尺寸
+            original_height, original_width, _ = all_frames[0].shape # e.g., 313, 207
+
+            # 2. 计算新的、保证为偶数的尺寸
+            new_width = original_width
+            new_height = original_height
+            if new_width % 2 != 0: new_width -= 1   # 207 -> 206
+            if new_height % 2 != 0: new_height -= 1 # 313 -> 312
             
-            # 使用 imageio.get_writer 并指定 libx264 (H.264)
+            print(f"[Debug] 正在创建临时反馈视频 (imageio): {temp_video_filepath}")
+            print(f"[Debug] 临时视频原始尺寸 (H,W): {original_height},{original_width} -> 调整后 (H,W): {new_height},{new_width}")
+
             writer = imageio.get_writer(
                 temp_video_filepath,
                 fps=self.fps_for_video_eval,
                 codec='libx264',
-                pixelformat='yuv420p', # 确保最大兼容性
-                macro_block_size=None  # 处理可能的奇数尺寸
+                pixelformat='yuv420p',
+                macro_block_size=None
             )
             
             for frame in all_frames:
@@ -80,8 +90,11 @@ class ReportGenerator:
                 if frame.dtype != np.uint8:
                     frame = frame.astype(np.uint8)
                 
-                # 关键: cv2.imread 得到 BGR, imageio 需要 RGB
-                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                # 3. 调整帧到新的偶数尺寸
+                resized_frame = cv2.resize(frame, (new_width, new_height), interpolation=cv2.INTER_AREA)
+
+                # 4. 关键: BGR -> RGB
+                frame_rgb = cv2.cvtColor(resized_frame, cv2.COLOR_BGR2RGB)
                 
                 writer.append_data(frame_rgb)
                 
@@ -97,7 +110,7 @@ class ReportGenerator:
         # 变更结束
         # ------------------------------------------------------------------
 
-        exercise_description = self.exercise_desc[str(exercise_id)] # 确保 exercise_id 是字符串
+        exercise_description = self.exercise_desc[exercise_id]
 
         system_prompt = (
             "你是一名专业的康复治疗师，请根据上传的短视频片段和标准动作描述，面向正在锻炼的乳腺癌患者给出反馈。你的反馈应该是鼓励性的，并指出一个可以立即改进的关键点。语气轻松并且口语化。反馈需简短，限制在20字以内。"
@@ -114,8 +127,7 @@ class ReportGenerator:
         finally:
             if os.path.exists(temp_video_filepath):
                 os.remove(temp_video_filepath)
-        
-        # ... (后续的 API 调用逻辑保持不变) ...
+
         messages = [
             {
                 "role": "system",
@@ -152,27 +164,29 @@ class ReportGenerator:
             if sprite_image is None: return []
             img_height, img_width, _ = sprite_image.shape
             frame_height, frame_width = img_height // 2, img_width // 3
-            return [sprite_image[i*frame_height:(i+1)*frame_height, j*frame_width:(j+1)*frame_width] 
-                    for i in range(2) for j in range(3)]
+            # 注意: cv2.resize 和 shape 使用 (H, W) 顺序
+            # 但 sprite_image[...] 切片是 [y:y+H, x:x+W]
+            # frame_width = 207, frame_height = 313
+            frames = [sprite_image[i*frame_height:(i+1)*frame_height, j*frame_width:(j+1)*frame_width] 
+                      for i in range(2) for j in range(3)]
+            # 过滤掉空的切片 (如果计算有误)
+            return [f for f in frames if f.shape[0] > 0 and f.shape[1] > 0]
         except Exception as e:
             print(f"[Error] 从 {image_path} 提取帧时发生异常: {e}")
             return []
 
-    # ------------------------------------------------------------------
-    # 变更 2: 替换 _create_video_from_frames 中的 cv2.VideoWriter
-    # ------------------------------------------------------------------
+    # (这个函数在上一版中已经正确，无需修改)
     def _create_video_from_frames(self, frames: List[Any], record_id: int, exercise_id: int) -> Optional[str]:
         if not frames:
             print("[Error] 没有帧可以用来创建视频。")
             return None
         
         try:
-            # 检查第一帧
             test_frame = frames[0]
             if not isinstance(test_frame, np.ndarray):
                 print(f"[Error] 帧不是 numpy 数组, 而是 {type(test_frame)}")
                 return None
-            original_height, original_width, _ = test_frame.shape
+            original_height, original_width, _ = test_frame.shape # e.g., 313, 207
         except Exception as e:
             print(f"[Error] 检查第一帧时出错: {e}")
             return None
@@ -181,10 +195,11 @@ class ReportGenerator:
         base_filename = f"record_{record_id}_exercise_{exercise_id}_{int(time.time())}"
 
         for scale in compression_levels:
-            new_width = int(original_width * scale)
-            new_height = int(original_height * scale)
-            if new_width % 2 != 0: new_width -= 1
-            if new_height % 2 != 0: new_height -= 1
+            # 这个函数已经有正确的 "确保偶数" 逻辑
+            new_width = int(original_width * scale)  # e.g., int(207 * 0.75) = 155
+            new_height = int(original_height * scale) # e.g., int(313 * 0.75) = 234
+            if new_width % 2 != 0: new_width -= 1   # 155 -> 154
+            if new_height % 2 != 0: new_height -= 1 # 234 -> 234
             if new_width < 2 or new_height < 2: continue
             
             video_filename = f"{base_filename}_scale_{int(scale*100)}p.mp4"
@@ -192,71 +207,62 @@ class ReportGenerator:
 
             try:
                 print(f"[Debug] 尝试使用 imageio 写入: {video_filepath} @ {self.fps_for_video_eval} fps, scale: {scale}")
-                
-                # 使用 imageio.get_writer 并指定 libx264 (H.264)
+                print(f"[Debug] 压缩视频尺寸 (H,W): {new_height},{new_width}")
+
                 writer = imageio.get_writer(
                     video_filepath,
                     fps=self.fps_for_video_eval,
                     codec='libx264',
-                    pixelformat='yuv420p', # 确保最大兼容性
-                    macro_block_size=None  # 处理可能的奇数尺寸
+                    pixelformat='yuv420p',
+                    macro_block_size=None
                 )
 
                 for frame in frames:
-                    # 1. 确保是 uint8
                     if frame.dtype != np.uint8:
                          frame = (frame * 255).astype(np.uint8) if frame.max() <= 1.0 else frame.astype(np.uint8)
 
-                    # 2. Resize
+                    # 调整到新的、偶数的、压缩的尺寸
                     resized_frame = cv2.resize(frame, (new_width, new_height), interpolation=cv2.INTER_AREA)
                     
-                    # 3. 关键: 帧来自 _extract_frames_from_sprite (cv2.imread BGR)
-                    #    imageio 需要 RGB
+                    # BGR -> RGB
                     frame_rgb = cv2.cvtColor(resized_frame, cv2.COLOR_BGR2RGB)
                     
-                    # 4. 写入
                     writer.append_data(frame_rgb)
 
                 writer.close()
                 print(f"[Debug] imageio 写入完成: {video_filepath}")
 
-                # 检查文件大小
                 if os.path.exists(video_filepath) and os.path.getsize(video_filepath) > 0:
                     if os.path.getsize(video_filepath) < self.max_file_size_bytes:
                         print(f"[Success] 成功创建视频 (使用 imageio): {video_filepath}")
                         return video_filepath
                     else:
-                        os.remove(video_filepath) # 文件太大，删除
+                        os.remove(video_filepath)
                 else:
                     print(f"[Warning] 视频文件创建失败或为空: {video_filepath}")
                     if os.path.exists(video_filepath):
-                        os.remove(video_filepath) # 删除空文件
+                        os.remove(video_filepath)
 
             except Exception as e:
                 print(f"[Error] 使用 imageio 写入失败 (scale {scale}): {e}")
                 if os.path.exists(video_filepath):
-                     os.remove(video_filepath) # 删除失败的尝试
-                continue # 尝试下一个压缩率
+                     os.remove(video_filepath)
+                continue
 
         print(f"[Error] 所有压缩尝试均失败 (包括 imageio)。\nrecord_id: {record_id}, exercise_id: {exercise_id}")
         return None
-    # ------------------------------------------------------------------
-    # 变更结束
-    # ------------------------------------------------------------------
 
     def _build_dashscope_messages(self, video_filepath: str, exercise_id: int) -> List[Dict[str, Any]]:
         try:
-            print(f"[Info] G_正在读取并编码视频文件: {video_filepath}")
+            print(f"[Info] 正在读取并编码视频文件: {video_filepath}")
             with open(video_filepath, "rb") as video_file:
                 base64_video = base64.b64encode(video_file.read()).decode("utf-8")
-
             video_data_uri = f"data:video/mp4;base64,{base64_video}"
-
         except FileNotFoundError:
             print(f"[Error] 视频文件未找到: {video_filepath}")
             raise
 
-        exercise_description = self.exercise_desc[str(exercise_id)] # 确保 exercise_id 是字符串
+        exercise_description = self.exercise_desc[exercise_id] # 确保 exercise_id 是字符串
         
         system_prompt = (
             "你是一名专业的乳腺癌术后上肢物理康复治疗师。请根据下面提供的康复训练视频和标准动作描述，对患者的动作进行全面评估，并以JSON格式返回一个包含10分制分数（score）和评估报告（report）的对象。"
@@ -314,12 +320,10 @@ class ReportGenerator:
             if not image_slices:
                 return {'success': False, 'error': f"未找到与 Record ID {record_id} 和 Exercise ID {exercise_id} 相关的图片记录。"}
             
-            # _extract_frames_from_sprite 返回 BGR 帧
             all_frames = [frame for s in image_slices if os.path.exists(s.image_path) for frame in self._extract_frames_from_sprite(s.image_path)]
             if not all_frames:
                 return {'success': False, 'error': "无法从有效的图片路径中提取任何帧。"}
 
-            # _create_video_from_frames 现在使用 imageio, 内部处理 BGR->RGB
             video_filepath = self._create_video_from_frames(all_frames, record_id, exercise_id)
             if not video_filepath:
                 return {'success': False, 'error': "从帧创建视频失败，或压缩后文件大小仍然超标。"}
@@ -345,10 +349,6 @@ class ReportGenerator:
                 error_msg = f"API调用失败: Code={response.status_code}, Message={response.message}"
                 return {'success': False, 'error': error_msg, 'video_path': video_filepath}
 
-            # 检查：是否应该更新 'existing_detail' 而不是创建 'new_detail'？
-            # 当前逻辑：总是创建 new_detail。如果 video_filepath is None，则会失败。
-            # 修正后的逻辑：如果 existing_detail 存在，就更新它
-            
             if existing_detail:
                 print(f"  - 更新已存在的 Detail ID: {existing_detail.record_detail_id}")
                 existing_detail.completion_timestamp = datetime.now()
@@ -375,11 +375,9 @@ class ReportGenerator:
         if not reports:
             return "报告列表为空，无法总结。"
 
-        # Extract the 'report' text from each JSON string in the list
         report_texts = []
         for r in reports:
             try:
-                # 尝试去除可能的 markdown json 标记
                 clean_r = r.strip().lstrip("```json").rstrip("```")
                 report_json = json.loads(clean_r)
                 if 'report' in report_json:
