@@ -138,6 +138,12 @@ class ChatHistory(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     summary = db.Column(db.Text, nullable=True)
 
+    status = db.Column(
+        db.Enum('consult', 'followup_in_progress', 'followup_completed'), 
+        nullable=False, 
+        default='consult'
+    )
+
     user = db.relationship('User', backref=db.backref('chat_histories', lazy=True))
 
     def to_dict(self):
@@ -148,7 +154,8 @@ class ChatHistory(db.Model):
             'is_follow_up': self.is_follow_up,
             'chat_history': self.chat_history,
             'timestamp': self.timestamp.isoformat() if self.timestamp else None,
-            'summary': self.summary
+            'summary': self.summary,
+            'status': self.status
         }
 
     def __repr__(self):
