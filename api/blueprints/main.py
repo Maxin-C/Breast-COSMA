@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, jsonify, request
 from sqlalchemy import func, case
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date, time
 
 from api.extensions import db
 from api.decorators import login_required
@@ -18,6 +18,11 @@ def index_page():
 @login_required
 def cases_page():
     return render_template('cases.html')
+
+@main_bp.route('/progress')
+@login_required
+def progress_page():
+    return render_template('progress.html', active_page='progress')
 
 @main_bp.route('/case/<int:user_id>')
 @login_required
@@ -260,3 +265,168 @@ def submit_nurse_evaluation():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": f"数据库错误: {str(e)}"}), 500
+
+@main_bp.route('/api/progress_data', methods=['GET'])
+@login_required
+def get_progress_data():
+    """
+    为随访进度页提供所有需要计算的数据。
+    """
+    try:
+        today = date.today()
+        # 您的要求是 2025年9月15日 之后注册的患者
+        REGISTRATION_START_DATE = date(2025, 9, 15) 
+        FOLLOWUP_WEEKS = [0, 2, 4, 6] # 第0, 2, 4, 6周
+        EXERCISE_DAYS_TOTAL = 42 # 共记录42天
+
+        # 1. 获取所有符合条件的患者
+        users = User.query.filter(
+            User.registration_date >= REGISTRATION_START_DATE
+        ).order_by(User.name).all()
+
+        followup_data = []
+        exercise_data = []
+
+        for user in users:
+            if not user.registration_date:
+                continue
+            
+            registration_date = user.registration_date.date()
+            days_since_registration = (today - registration_date).days
+            
+            if days_since_registration < 0: # 排除尚未注册的（以防万一）
+                continue
+
+            # --- 2. 计算随访进程 (Follow-up Progress) ---
+            followup_nodes = []
+            has_yellow = False
+            has_red = False
+            
+            # 计算总进度条的百分比 (从注册日到第6周结束)
+            max_followup_week_days = (FOLLOWUP_WEEKS[-1] * 7) + 6 # 第6周(day 42)到第48天
+            progress_percentage = (days_since_registration / max_followup_week_days) * 100
+            
+            all_reachable_nodes_are_green = True # 假设所有已到达的节点都是绿色
+
+            for week in FOLLOWUP_WEEKS:
+                node_status = "grey" # 默认灰色 (未来)
+                week_start_day = week * 7
+                week_end_day = week_start_day + 6 # 第0周是 0-6 天
+
+                # 检查是否到达或超过了这一周的开始
+                if days_since_registration >= week_start_day:
+                    # 这一周是当前周或过去周
+                    week_start_dt = datetime.combine(registration_date + timedelta(days=week_start_day), time.min)
+                    week_end_dt = datetime.combine(registration_date + timedelta(days=week_end_day), time.max)
+                    
+                    # 查询该周内是否有QoL记录
+                    record_exists = db.session.query(QoL.qol_id).filter(
+                        QoL.user_id == user.user_id,
+                        QoL.submission_time.between(week_start_dt, week_end_dt)
+                    ).first()
+
+                    if record_exists:
+                        node_status = "green"
+                    else:
+                        # 没有记录，判断是错过了还是正在等
+                        if days_since_registration > week_end_day: # 已经过了这一周
+                            node_status = "red"
+                            has_red = True
+                            all_reachable_nodes_are_green = False
+                        else: # 正在这一周内
+                            node_status = "yellow"
+                            has_yellow = True
+                            all_reachable_nodes_are_green = False
+                else:
+                    # 还没到这一周
+                    all_reachable_nodes_are_green = False
+
+                followup_nodes.append({"week": week, "status": node_status})
+
+            # 确定总体状态
+            overall_status = "无需随访"
+            if has_red:
+                overall_status = "脱落"
+            elif has_yellow:
+                overall_status = "等待随访"
+            elif all_reachable_nodes_are_green and days_since_registration > max_followup_week_days:
+                # 所有节点都是绿色，并且已经过了最后期限
+                overall_status = "无需随访"
+
+
+            followup_data.append({
+                "user_id": user.user_id,
+                "name": user.name,
+                "nodes": followup_nodes,
+                "status": overall_status,
+                "progress_percent": min(progress_percentage, 100)
+            })
+
+            # --- 3. 计算锻炼次数 (Exercise Progress) ---
+            start_dt = datetime.combine(registration_date, time.min)
+            # 42天，即 day 0 到 day 41
+            end_dt = datetime.combine(registration_date + timedelta(days=EXERCISE_DAYS_TOTAL), time.min)
+
+            # 一次性查询该用户42天内的所有锻炼记录
+            exercise_counts_query = db.session.query(
+                func.date(RecoveryRecord.record_date).label('date'),
+                func.count(RecoveryRecord.record_id).label('count')
+            ).filter(
+                RecoveryRecord.user_id == user.user_id,
+                RecoveryRecord.record_date >= start_dt,
+                RecoveryRecord.record_date < end_dt # 小于第42天的开始 (即包含第0-41天)
+            ).group_by(func.date(RecoveryRecord.record_date)).all()
+            
+            # 转为字典以便快速查找
+            counts_dict = {r.date: r.count for r in exercise_counts_query}
+
+            exercise_nodes = []
+            green_days = 0
+            red_days = 0
+
+            # 遍历 0 到 41 (共42天)
+            for day_num in range(EXERCISE_DAYS_TOTAL):
+                current_day_date = registration_date + timedelta(days=day_num)
+                day_status = "grey" # 默认灰色 (未来)
+                count = counts_dict.get(current_day_date, 0)
+                
+                # *** 修正后的逻辑 ***
+                # 检查这一天是今天、过去还是未来
+                if today >= current_day_date: 
+                    # 如果是今天或过去
+                    if count > 0:
+                        day_status = "green"
+                        green_days += 1
+                    else:
+                        # 严格按照要求：等于0为红色 (无论是今天还是过去)
+                        day_status = "red"
+                        red_days += 1
+                # else: day_status 保持 "grey" (未来)
+
+                exercise_nodes.append({
+                    "day": day_num + 1, # Day 1 到 Day 42
+                    "status": day_status,
+                    "count": count
+                })
+
+            # 计算占比
+            total_days_evaluated = green_days + red_days
+            ratio = (green_days / total_days_evaluated * 100) if total_days_evaluated > 0 else 0
+            ratio_status = "low" if ratio < 50 else "normal"
+
+            exercise_data.append({
+                "user_id": user.user_id,
+                "name": user.name,
+                "nodes": exercise_nodes,
+                "ratio_percent": f"{ratio:.0f}%",
+                "ratio_status": ratio_status
+            })
+            
+        return jsonify({
+            "followup_progress": followup_data,
+            "exercise_progress": exercise_data
+        })
+
+    except Exception as e:
+        print(f"Error in get_progress_data: {e}") # 打印错误到后端日志
+        return jsonify({"error": str(e)}), 500

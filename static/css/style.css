@@ -87,6 +87,7 @@ body {
 .main-content {
     flex: 1;
     padding: 30px 40px;
+    min-width: 0; /* ****** 这是关键的修复 ****** */
 }
 
 .header h1 {
@@ -470,4 +471,157 @@ body {
 .custom-table th.sortable i {
     margin-left: 5px;
     color: #aaa;
+}
+
+/* 随访进度页面样式 */
+div.content-card {
+    max-width: 100%;       /* 1. 确保卡片不会超出页面宽度 */
+    overflow-x: auto;      /* 2. 当内部内容溢出时，在卡片内部显示横向滚动条 */
+}
+
+/* 随访进度页面样式 */
+.scrollable-list {
+    max-height: 350px; 
+    overflow-y: auto;
+    border-top: 1px solid #eee;
+}
+
+.patient-row-header,
+.patient-row {
+    display: flex;
+    align-items: center;
+    padding: 12px 10px;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+    min-width: 800px;      /* 3. 设置最小宽度，确保内容不换行，从而触发父元素的横向滚动 */
+}
+
+.patient-row-header {
+    font-weight: 500;
+    color: var(--sub-text-color);
+    background-color: #f8f9fa;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.patient-name {
+    flex: 0 0 70px; /* 姓名固定宽度 */
+    font-weight: 500;
+    padding-right: 10px;
+}
+
+/* 随访进度条 */
+.progress-bar-labels {
+    flex: 1;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 10px; /* 对应节点的-50%偏移 */
+    margin: 0 20px;
+    min-width: 400px; /* 给进度条标签一个最小宽度 */
+}
+.progress-bar-labels span {
+    width: 0;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.progress-bar-container {
+    flex: 1;
+    margin: 0 20px;
+    padding: 0 10px; /* 左右各留出10px给圆点 */
+    min-width: 400px; /* 给进度条容器一个最小宽度 */
+}
+
+.progress-bar-track {
+    position: relative;
+    width: 100%;
+    height: 8px;
+    background-color: #e9ecef; /* 默认灰色轨道 */
+    border-radius: 4px;
+}
+
+.progress-bar-fill {
+    position: absolute;
+    height: 100%;
+    background-color: #adb5bd; /* 进度条填充色 */
+    border-radius: 4px;
+}
+
+.progress-node {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 3px solid white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.progress-node.status-green { background-color: #198754; }
+.progress-node.status-yellow { background-color: #ffc107; }
+.progress-node.status-red { background-color: #dc3545; }
+.progress-node.status-grey { background-color: #adb5bd; }
+
+.patient-status {
+    flex: 0 0 80px;
+    text-align: right;
+    font-weight: 500;
+}
+
+.patient-status.status-waiting { color: #ffc107; }
+.patient-status.status-dropout { color: #dc3545; }
+.patient-status.status-complete { color: #198754; }
+
+/* 锻炼次数 */
+.exercise-header .exercise-days-labels {
+    flex: 1;
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #666;
+    padding: 0 5px;
+    min-width: 400px; /* 最小宽度 */
+}
+
+.exercise-days-wrapper {
+    flex: 1;
+    overflow-x: auto; /* 允许42天水平滚动 */
+    padding: 5px 0;
+    margin: 0 10px;
+    min-width: 400px; /* 最小宽度 */
+}
+
+.exercise-days-container {
+    display: flex;
+    gap: 8px; /* 圆点间距 */
+    width: min-content; /* 防止换行 */
+}
+
+.day-node {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 500;
+    color: white;
+    flex-shrink: 0; /* 防止圆点被压缩 */
+}
+
+.day-node.status-green { background-color: #198754; }
+.day-node.status-red { background-color: #dc3545; }
+.day-node.status-grey { background-color: #e9ecef; color: #e9ecef; } /* 灰色，并隐藏数字 */
+
+.patient-ratio {
+    flex: 0 0 100px;
+    text-align: right;
+    font-weight: bold;
+    font-size: 16px;
+}
+.patient-ratio.status-low {
+    color: #dc3545; /* 低于50%标红 */
 }

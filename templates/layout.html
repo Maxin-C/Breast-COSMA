@@ -19,6 +19,7 @@
                 <ul>
                     <li class="{{ 'active' if active_page == 'dashboard' else '' }}"><a href="{{ url_for('main.index_page') }}"><i class="fa-solid fa-chart-pie"></i></a></li>
                     <li class="{{ 'active' if active_page == 'cases' else '' }}"><a href="{{ url_for('main.cases_page') }}"><i class="fa-solid fa-users"></i></a></li>
+                    <li class="{{ 'active' if active_page == 'progress' else '' }}"><a href="{{ url_for('main.progress_page') }}"><i class="fa-solid fa-wave-square"></i></a></li>
                     <li><a href="{{ url_for('auth.logout') }}"><i class="fa-solid fa-right-from-bracket"></i></a></li>
                 </ul>
             </nav>

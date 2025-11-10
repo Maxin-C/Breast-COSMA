@@ -4,6 +4,7 @@ import json
 from openai import OpenAI
 from typing import List, Dict, Optional, Any
 from datetime import datetime
+import re 
 
 from .retriever import Retriever 
 from ..database.models import db, User, RecoveryRecord, ChatHistory, QoL
@@ -27,13 +28,7 @@ class Consult:
         生成的内容必须少于150字，内容必须简洁。
         """
 
-        self.follow_up_forms = []
-        form_path = os.getenv("FOLLOW_UP_FORM_PATH")
-        if form_path and os.path.exists(form_path):
-            for f in os.listdir(form_path):
-                if f.endswith('.json'):
-                    form_file_path = os.path.join(form_path, f)
-                    self.follow_up_forms.append(json.load(open(form_file_path, 'r', encoding='utf-8')))
+        self.follow_up_forms = json.load(open(os.getenv("FOLLOW_UP_FORM_PATH"), 'r', encoding='utf-8'))
     
     def process_message(self, user_id: int, query: str, conversation_id: Optional[str] = None, mode: str = 'consult', end_conversation: bool = False) -> Dict[str, Any]:
         is_follow_up_mode = (mode == 'followup')
@@ -180,22 +175,18 @@ class Consult:
             return None
             
         messages = [{"role": "system", "content": f'''
-请你根据随访人员与患者的对话内容，提取出下面随访表单中对应的随访结果至"form_result"，并根据'scoring_rules'计算随访得分至"scoring_result"。如果随访结果计算方法中条目为可选且没有随访结果的，其"value"设定为"-1"。
+请你根据随访人员与患者的对话内容，提取出下面随访表单中对应的随访结果至"form_result"。
+你只需要提取患者的回答，不需要进行任何计算。
+
 随访表单内容如下：
 {self.follow_up_forms}
+
 输出格式为json，json结构为：
 {{
     "form_result": [
     {{
         "question_id":"", 
         "answer_value":""
-    }},
-    ...
-    ],
-    "scoring_result": [
-    {{
-        "module_name":"",
-        "value":""
     }},
     ...
     ]
@@ -216,6 +207,133 @@ class Consult:
         except Exception as e:
             print(f"Error extracting follow-up results: {e}")
             return None
+
+    def _calculate_scores(self, form_result_list: List[Dict], scoring_rules: Dict) -> List[Dict]:
+        """
+        根据提取的 form_result 和 scoring_rules 在 Python 中计算分数。
+        此版本解析一个结构化的 JSON 'formula' 对象，而不是使用 eval()。
+        """
+        results = []
+        
+        # 1. 将 list 转换为 dict (e.g., {"q1": 1, "q2": 3})
+        form_data = {
+            item['question_id']: item.get('answer_value') 
+            for item in form_result_list
+        }
+
+        for module_name, rule in scoring_rules.items():
+            try:
+                formula = rule['formula']
+                is_optional = rule.get('is_optional', False)
+                
+                item_sum = 0.0
+                n = 0 # 'n' 是实际回答的问题数量
+                
+                # 收集此公式需要的所有 question_id
+                item_ids_to_check = []
+                if formula['type'] in ["AVERAGE_SCALE", "SUM_SCALE"]:
+                    item_ids_to_check = formula['items']
+                elif formula['type'] == "COMPLEX_SUM_SCALE":
+                    item_ids_to_check = [item['id'] for item in formula['items']]
+
+                # 检查可选模块：是否所有必需的 item 都有值？
+                has_all_data_for_optional = True
+                if is_optional:
+                    for item_id in item_ids_to_check:
+                        value = form_data.get(item_id)
+                        if value is None or not isinstance(value, (int, float)):
+                            has_all_data_for_optional = False
+                            break
+                
+                if is_optional and not has_all_data_for_optional:
+                    # 可选模块，但数据不全（例如，用户跳过了 q12），不计算
+                    results.append({"module_name": module_name, "value": -1}) # -1 表示未计算
+                    continue
+
+                # --- 2. 累加 item ---
+                
+                if formula['type'] in ["AVERAGE_SCALE", "SUM_SCALE"]:
+                    item_operation = formula.get('item_operation', 'val') # 默认为 'val'
+                    for item_id in formula['items']:
+                        value = form_data.get(item_id)
+                        if value is not None and isinstance(value, (int, float)):
+                            if item_operation == "4-val":
+                                item_sum += (4.0 - value)
+                            elif item_operation == "val":
+                                item_sum += float(value)
+                            n += 1 # 只在有值时才增加 n
+                            
+                elif formula['type'] == "COMPLEX_SUM_SCALE":
+                    for item in formula['items']:
+                        item_id = item['id']
+                        item_op = item['op']
+                        value = form_data.get(item_id)
+                        
+                        if value is not None and isinstance(value, (int, float)):
+                            if item_op == "4-val":
+                                item_sum += (4.0 - value)
+                            elif item_op == "val":
+                                item_sum += float(value)
+                            n += 1 # 只在有值时才增加 n
+
+                # --- 3. 最终计算 ---
+                
+                # 检查是否有足够的数据进行计算
+                if n == 0:
+                    if is_optional:
+                        # 理论上被 'has_all_data' 捕获，但作为保险
+                        results.append({"module_name": module_name, "value": -1}) 
+                    else:
+                        # 必选模块，但没有数据
+                        results.append({"module_name": module_name, "value": None}) # None 表示计算失败
+                    continue
+
+                # 确定分母 'n_denominator'
+                n_denominator = 0.0
+                if formula['n_source'] == "count":
+                    n_denominator = float(n) # 使用我们刚刚计算的 'n'
+                else:
+                    n_denominator = float(formula['n_source']) # 使用固定的 'n'
+                
+                if n_denominator == 0:
+                     results.append({"module_name": module_name, "value": None}) # 避免除以零
+                     continue
+
+                final_score = 0.0
+                
+                if formula['type'] == "AVERAGE_SCALE":
+                    # e.g., DASH: [((sum / n_denominator) + offset) * scale]
+                    average = item_sum / n_denominator
+                    offset = formula.get('offset', 0.0)
+                    scale = formula.get('scale', 1.0)
+                    final_score = (average + offset) * scale
+                
+                elif formula['type'] in ["SUM_SCALE", "COMPLEX_SUM_SCALE"]:
+                    # e.g., [sum * scale / n_denominator]
+                    scale = formula.get('scale', 1.0)
+                    if formula.get('divide_by_n', False):
+                        final_score = (item_sum * scale) / n_denominator
+                    else:
+                        final_score = item_sum * scale
+                        
+                results.append({"module_name": module_name, "value": round(final_score, 2)})
+
+            except Exception as e:
+                print(f"Error calculating score for {module_name}: {e}")
+                results.append({"module_name": module_name, "value": None}) # None for calculation_failed
+
+        return results
+        
+    def _get_required_question_ids(self, form_json: Dict) -> List[str]:
+        required_q_ids = []
+        try:
+            for section in form_json.get('sections', []):
+                if not section.get('is_optional', False):
+                    for q in section.get('questions', []):
+                        required_q_ids.append(q['id'])
+        except Exception as e:
+            print(f"Error parsing form sections: {e}")
+        return required_q_ids
 
     def _get_user_chat_history(self, history):
         content = ""
@@ -301,15 +419,22 @@ class Consult:
         history = self._get_conversation_history(conversation_id)
         history.append({"role": "user", "content": user_query})
 
+        required_q_ids = self._get_required_question_ids(self.follow_up_forms)
+
         messages = [{"role": "system", "content": f'''
         你是一名友好和有同情心的医疗助理，对病人进行例行随访，了解他们术后康复情况。你的目标是进行一次自然的对话，并在这个过程中完成随访。
 
         指令:
         1.  对话式：不要只阅读表单上的问题。结合上下文，将它们转换成自然的日常语言。每次输出内容需要语言简练，不要重复表述类似的意思。
-        2.  确认答案：在继续之前，简要确认一下患者的选择以确保准确性。如果需要病人进一步确认，则等待得到准确答案后提出新的问题，否则在确认的同时需要提出新的问题，不能让患者无话可说。
-        3.  遵循结构：按照section_id依次问询随访问题，在一个section内的问题可以根据情况自由调整提问顺序，或者将问题合并提问，以减少问答时间。
+        2.  确认答案：在继续之前，简要确认一下患者的选择以确保准确性。如果需要病人进一步确认，则等待得到准确答案后提出新的问题，准确答案指的是能够明确对应到具体选项，否则在确认的同时需要提出新的问题，不能让患者无话可说。
+        
+        3.  遵循结构：按照section_id依次问询随访问题。不要和合并任何问题。
+
         4.  处理可选的部分：对于可选的部分（"is_optional": true），首先询问relevance_question。如果病人态度是肯定的，继续回答那个部分的问题。如果是否定的，就跳过这一个section。
-        5.  随访完成提示：在完成所有必选随访问题（包括可选section中病人态度肯定时需要提问的问题）后，必须输出“本次随访到此结束，感谢您的支持”。注意，这个判断必须严格，要求在能够保证可以根据对话历史提取出随访结果时才能认为随访已完成。
+        
+        5.  随访完成提示：在完成所有必选随访问题后，必须输出“本次随访到此结束，感谢您的支持”。
+            **必选问题ID列表如下：{required_q_ids}**
+            你必须在对话中获得这些ID的明确答案（非'不确定'或'跳过'）后，才能输出结束语。
 
         Attention: 必须获取所有表单的所有必选随访问题结果。如果用户回答多个问题时答案模糊不清，必须追问到清晰为止。
         Attention: 必须获取所有表单的所有必选随访问题结果。如果用户回答多个问题时答案模糊不清，必须追问到清晰为止。
@@ -328,7 +453,7 @@ class Consult:
             completion = self.client.chat.completions.create(
                 model=self.qwen_model,
                 messages=messages,
-                max_tokens=250
+                max_tokens=150
             )
             assistant_response = completion.model_dump()['choices'][0]['message']['content']
         except Exception as e:
@@ -352,21 +477,30 @@ class Consult:
             print(f"Follow-up for conversation {conversation_id} is complete. Extracting and saving results...")
             final_response['followup_complete'] = True
             
-            # Fetch the full, updated history for accurate result extraction
             full_history = self._get_conversation_history(conversation_id)
             results_json_str = self._extract_followup_results(history=full_history)
             
             if results_json_str:
                 try:
                     results_data = json.loads(results_json_str)
-                    final_response['followup_results'] = results_data
+                    form_result_list = results_data.get('form_result', [])
                     
-                    # Save the extracted results to the qol_records table
+                    scoring_result_list = self._calculate_scores(
+                        form_result_list, 
+                        self.follow_up_forms['scoring_rules']
+                    )
+                    
+                    final_results_obj = {
+                        "form_result": form_result_list,
+                        "scoring_result": scoring_result_list
+                    }
+                    
+                    final_response['followup_results'] = final_results_obj
+                    
                     qol_record_data = {
                         'user_id': user_id,
-                        # Safely get form_name from the first form, or use a default
-                        'form_name': self.follow_up_forms[0].get('form_name', 'Comprehensive QoL'),
-                        'result': results_data,
+                        'form_name': self.follow_up_forms.get('form_name', 'Comprehensive QoL'),
+                        'result': final_results_obj,
                         'submission_time': datetime.now()
                     }
                     db_operations.add_record(QoL, qol_record_data)
@@ -383,6 +517,7 @@ class Consult:
         return final_response
 
     def summarize_conversation(self, conversation_id: str,  history: Optional[List[Dict]] = None) -> str:
+
         if history is None:
             history = self._get_conversation_history(conversation_id)
         if not history:

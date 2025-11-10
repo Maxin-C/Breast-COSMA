@@ -1,0 +1,57 @@
+{% extends "layout.html" %}
+{% block title %}随访与锻炼进度{% endblock %}
+
+{% block head %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="progress-page-container">
+    
+    <div class="content-card mb-4">
+        <h2 class="mb-3">随访进程</h2>
+        
+        <div class="patient-row-header">
+            <span class="patient-name">患者</span>
+            <div class="progress-bar-labels">
+                <span>Week 0</span>
+                <span>Week 2</span>
+                <span>Week 4</span>
+                <span>Week 6</span>
+            </div>
+            <span class="patient-status">状态</span>
+        </div>
+        
+        <div class="scrollable-list" id="followup-list">
+            <div class="patient-row" id="followup-loading">
+                <span class="patient-name">加载中...</span>
+            </div>
+            
+            </div>
+    </div>
+
+    <div class="content-card">
+        <h2 class="mb-3">锻炼次数</h2>
+
+        <div class="patient-row-header exercise-header">
+            <span class="patient-name">患者</span>
+            <div class="exercise-days-labels">
+                <span>Day 1</span>
+                <span style="margin-left: auto;">Day 42</span>
+            </div>
+            <span class="patient-ratio">锻炼天数占比</span>
+        </div>
+
+        <div class="scrollable-list" id="exercise-list">
+            <div class="patient-row" id="exercise-loading">
+                <span class="patient-name">加载中...</span>
+            </div>
+
+            </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{{ url_for('static', filename='js/progress.js') }}"></script>
+{% endblock %}

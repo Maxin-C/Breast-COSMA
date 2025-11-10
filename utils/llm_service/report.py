@@ -106,9 +106,6 @@ class ReportGenerator:
             if os.path.exists(temp_video_filepath):
                 os.remove(temp_video_filepath)
             return "创建分析视频失败。"
-        # ------------------------------------------------------------------
-        # 变更结束
-        # ------------------------------------------------------------------
 
         exercise_description = self.exercise_desc[exercise_id]
 
