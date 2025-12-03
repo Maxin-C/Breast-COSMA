@@ -181,6 +181,11 @@ class Consult:
                 current_history.extend([user_msg_obj, assistant_msg_obj])
                 record.chat_history = current_history
                 
+                # --- !! 关键修复 !! ---
+                # 修复BUG：当记录已存在时，必须更新 is_follow_up 字段
+                record.is_follow_up = is_follow_up
+                # --- 结束修复 ---
+
                 # --- 修改：只在会话未*自然完成*时更新状态 ---
                 if record.status != 'followup_completed':
                     record.status = new_status
@@ -194,9 +199,9 @@ class Consult:
                     'conversation_id': conversation_id,
                     'user_id': user_id,
                     'chat_history': new_history,
-                    'is_follow_up': is_follow_up,
+                    'is_follow_up': is_follow_up, # 对新记录设置
                     'summary': None, 
-                    'status': new_status # --- 修改：使用新的状态变量 ---
+                    'status': new_status # 对新记录设置
                 }
                 db_operations.add_record(ChatHistory, data)
         except Exception as e:
@@ -246,14 +251,14 @@ class Consult:
 示例：
 {{
     "form_result": [
-        {
+        {{
             "question_id": "q1",
             "answer_value": 2
-        },
-        {
+        }},
+        {{
             "question_id": "q2",
             "answer_value": 5
-        }
+        }}
     ]
 }}
 
@@ -385,6 +390,49 @@ class Consult:
                 content += h['content'] + '\n'
         return content
 
+    # --- 新增：LLM 裁判函数 ---
+    def _is_followup_complete(self, history: list, required_q_ids: list) -> bool:
+        """
+        使用一个独立的、轻量级的LLM调用来判断随访是否完成。
+        """
+        # 1. 便宜的预检查：如果对话轮数明显少于必答问题数，那肯定没完成
+        if len(history) < len(required_q_ids):
+            return False
+            
+        chat_history_text = "\n".join([f"{h['role']}: {h['content']}" for h in history])
+        
+        # 2. 准备 "裁判" prompt
+        messages = [
+            {"role": "system", "content": f"""
+你是一个分析助手。根据对话历史和必答问题列表，判断随访是否已完成。
+必答问题ID列表: {required_q_ids}
+
+--- 对话历史开始 ---
+{chat_history_text}
+--- 对话历史结束 ---
+
+请分析对话历史，判断患者是否已经为*所有*必答问题ID提供了明确的答案。
+你的回答必须且只能是 "YES" 或 "NO"。
+"""},
+        ]
+        
+        try:
+            # 3. 调用LLM
+            completion = self.client.chat.completions.create(
+                model=self.qwen_model, # 您可以使用一个更快/更便宜的模型，如果qwen-plus太慢
+                messages=messages,
+                max_tokens=5, # 只需要 "YES" 或 "NO"
+                temperature=0.0 # 确保确定性
+            )
+            response_text = completion.model_dump()['choices'][0]['message']['content'].strip().upper()
+            
+            print(f"Follow-up completion judge returned: {response_text}")
+            return response_text == "YES"
+        except Exception as e:
+            print(f"Error in _is_followup_complete judge: {e}")
+            return False # 出错时，默认为未完成
+    # --- 结束新增 ---
+
     def chat_consult(self, user_id: int, query: str, conversation_id: Optional[str] = None, end_conversation: bool = False) -> Dict[str, Any]:
         if not conversation_id:
             conversation_id = str(uuid.uuid4())
@@ -423,7 +471,6 @@ class Consult:
             response = completion.model_dump()
             assistant_response = response['choices'][0]['message']['content']
 
-            # --- 修改：确保 `is_follow_up=False` 被传递 ---
             self._save_conversation_turn(user_id, conversation_id, query, assistant_response, is_follow_up=False)
             
             references = self._format_references(retrieved_docs)
@@ -482,6 +529,8 @@ class Consult:
         5.  随访完成提示：在完成所有必选随访问题后，必须输出“本次随访到此结束，感谢您的支持”。
             **必选问题ID列表如下：{required_q_ids}**
             你必须在对话中获得这些ID的明确答案（非'不确定'或'跳过'）后，才能输出结束语。
+            
+        6.  声明表单类型：在进行提问时，需要参考form_type字段向用户声明当前采集的表单属于哪一类表单，每次提问都需要声明。
 
         Attention: 必须获取所有表单的所有必选随访问题结果。如果用户回答多个问题时答案模糊不清，必须追问到清晰为止。
         Attention: 必须获取所有表单的所有必选随访问题结果。如果用户回答多个问题时答案模糊不清，必须追问到清晰为止。
@@ -511,23 +560,45 @@ class Consult:
                 'timestamp': datetime.now().isoformat()
             }
 
+        # --- 新增：更稳健的完成检查 ---
+        is_complete = False
+        magic_string = "本次随访到此结束，感谢您的支持"
+        
+        # 1. 快速检查：LLM是否按要求返回了魔法字符串？
+        if magic_string in assistant_response:
+            is_complete = True
+        else:
+            # 2. 检查历史回复
+            for msg in history:
+                if msg.get('role') == 'assistant' and magic_string in msg.get('content', ''):
+                    is_complete = True
+                    break
+
         final_response = {
             'response': assistant_response,
             'conversation_id': conversation_id,
             'timestamp': datetime.now().isoformat(),
-            'followup_complete': False
+            'followup_complete': is_complete # --- 修改：使用新的 `is_complete` 变量 ---
         }
         
         # 只有当用户有实际输入时才保存这一轮对话
         if user_query:
-            # --- 修改：确保 `is_follow_up=True` 被传递 ---
             self._save_conversation_turn(user_id, conversation_id, user_query, assistant_response, is_follow_up=True)
 
-        if "本次随访到此结束，感谢您的支持" in assistant_response:
+        if is_complete:
             print(f"Follow-up for conversation {conversation_id} is complete. Extracting and saving results...")
-            final_response['followup_complete'] = True
             
+            # --- 新增：如果LLM忘了说结束语，我们帮它加上 ---
+            if magic_string not in assistant_response:
+                assistant_response += f"\n\n{magic_string}"
+                final_response['response'] = assistant_response # 更新我们即将发回的响应
+            # --- 结束新增 ---
+
             full_history = self._get_conversation_history(conversation_id)
+            # 确保 full_history 包含最新的回复
+            if not any(h['content'] == assistant_response for h in full_history):
+                 full_history.append({"role": "assistant", "content": assistant_response})
+                 
             results_json_str = self._extract_followup_results(history=full_history)
             
             if results_json_str:
@@ -626,6 +697,7 @@ class Consult:
         
         # --- 修改：根据新逻辑决定是否更新状态 ---
         # 只有在自然完成时（由 chat_followup 调用）才应将 mark_completed 设为 True
+        # 手动结束时 (来自 process_message)，mark_completed 为 False，状态保持不变
         if mark_completed and record.status != 'followup_completed':
             update_data['status'] = 'followup_completed'
             print(f"Marking conversation as completed: {conversation_id}")

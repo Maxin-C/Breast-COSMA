@@ -3,7 +3,7 @@ from flask import Blueprint, request, jsonify, current_app, url_for
 import uuid
 from api.extensions import db
 import dashscope
-from dashscope.audio.tts import SpeechSynthesizer
+from dashscope.audio.tts_v2 import SpeechSynthesizer
 from utils.database.models import ChatHistory
 
 consult_bp = Blueprint('consult', __name__)
@@ -93,34 +93,47 @@ def text_to_speech():
 
     dashscope.api_key = os.getenv("QWEN_API_KEY")
     tts_dir = os.getenv("TTS_SAVE_PATH", "static/tts")
-
+    
+    TTS_MODEL = 'cosyvoice-v3-flash' 
+    TTS_VOICE = 'longanyun_v3' 
+    TTS_FORMAT = 'mp3'
+    
     os.makedirs(tts_dir, exist_ok=True)
 
-    filename = f"tts_{uuid.uuid4()}.mp3"
+    filename = f"tts_{uuid.uuid4()}.{TTS_FORMAT}"
     filepath = os.path.join(tts_dir, filename)
 
+    synthesizer = None
+    
     try:
-        result = SpeechSynthesizer.call(model='sambert-zhishuo-v1',
-            text=text_to_synthesize,
-            sample_rate=48000,
-            format='mp3'
+        synthesizer = SpeechSynthesizer(
+            model=TTS_MODEL, 
+            voice=TTS_VOICE,
+            speech_rate = 1.5,
         )
 
-        audio = result.get_audio_data()
-        if audio is None:
-            current_app.logger.error("Dashscope TTS returned no audio data.")
-            return jsonify({'error': 'TTS synthesis failed.'}), 500
-        with open(filepath, 'wb') as f:
-            f.write(audio)
+        audio_data = synthesizer.call(text_to_synthesize)
 
-        audio_url_path = url_for('static', filename=f'tts/{filename}')
+        if not audio_data:
+            current_app.logger.error("Dashscope TTS returned no audio data.")
+            return jsonify({'error': 'TTS synthesis failed: No audio data returned.'}), 500
+            
+        with open(filepath, 'wb') as f:
+            f.write(audio_data)
+
+        with current_app.app_context(): 
+            audio_url_path = url_for('static', filename=f'tts/{filename}')
 
         return jsonify({
             'audio_url': audio_url_path
         }), 200
 
     except Exception as e:
-        current_app.logger.error(f"Error in TTS synthesis: {e}")
+        current_app.logger.error(f"Error in TTS synthesis (V2 API): {e}")
         if os.path.exists(filepath):
-            os.remove(filepath)
+            os.remove(filepath) 
         return jsonify({'error': 'An internal error occurred during TTS synthesis'}), 500
+    
+    finally:
+        if synthesizer:
+            synthesizer.close()

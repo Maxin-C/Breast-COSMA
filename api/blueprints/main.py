@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, jsonify, request
+from flask import Blueprint, render_template, jsonify, request, session
 from sqlalchemy import func, case
 from datetime import datetime, timedelta, date, time
 
@@ -281,7 +281,8 @@ def get_progress_data():
 
         # 1. 获取所有符合条件的患者
         users = User.query.filter(
-            User.registration_date >= REGISTRATION_START_DATE
+            User.registration_date >= REGISTRATION_START_DATE,
+            User.fall_off == False  # 只选择 fall_off 为 False 的用户
         ).order_by(User.name).all()
 
         followup_data = []

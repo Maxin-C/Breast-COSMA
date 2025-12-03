@@ -39,6 +39,8 @@ class UserForm(FlaskForm):
     # For DateTimeField, ensure the format matches what you expect from input
     registration_date = DateTimeField('Registration Date (YYYY-MM-DD HH:MM:SS)', format='%Y-%m-%d %H:%M:%S', validators=[Optional()])
     surgery_date = DateTimeField('Last Login Date (YYYY-MM-DD HH:MM:SS)', format='%Y-%m-%d %H:%M:%S', validators=[Optional()])
+    fall_off = BooleanField('Fall Off Status', validators=[Optional()])
+    extubation_status = StringField('Extubation Status', validators=[DataRequired(), Length(max=100)])
 
 class RecoveryPlanForm(FlaskForm):
     plan_id = IntegerField('Plan ID', validators=[Optional()])

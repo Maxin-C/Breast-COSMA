@@ -33,6 +33,7 @@ class User(Base):
     registration_date = db.Column(db.DateTime, default=datetime.utcnow)
     surgery_date = db.Column(db.DateTime)
     extubation_status = db.Column(db.String(100), nullable=False, default='未拔管')
+    fall_off = db.Column(db.Boolean, default=False)
 
     recovery_plans = db.relationship('UserRecoveryPlan', backref='user', lazy=True)
     calendar_schedules = db.relationship('CalendarSchedule', backref='user', lazy=True)

@@ -10,13 +10,12 @@ document.addEventListener('DOMContentLoaded', function () {
      * @param {number} week - 周数 (0, 2, 4, 6)
      */
     function getWeekPercentage(week) {
-        const weekMap = {
-            0: 0,
-            2: 33.33,
-            4: 66.66,
-            6: 100,
-        };
-        return weekMap[week] || 0;
+        // ✨ 更新点 2: 进度条分割为 7 份
+        const totalSegments = 7;
+        const percentage = (week / totalSegments) * 100;
+        
+        // 确保百分比在 0 到 100 之间
+        return Math.min(100, Math.max(0, percentage));
     }
 
     /**
@@ -28,10 +27,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (followupLoading) followupLoading.remove();
         container.innerHTML = ''; // 清空
 
-        if (!patients || patients.length === 0) {
-            container.innerHTML = '<div class="patient-row"><span class="patient-name">没有符合条件的患者</span></div>';
-            return;
-        }
+        // ... 省略了其他逻辑 ...
 
         patients.forEach(patient => {
             const statusClass = {
@@ -40,6 +36,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 '无需随访': 'status-complete',
             }[patient.status] || 'status-complete';
 
+            // node.week 现在将使用新的百分比
             const nodesHtml = patient.nodes.map(node =>
                 `<div class="progress-node status-${node.status}" style="left: ${getWeekPercentage(node.week)}%;"></div>`
             ).join('');

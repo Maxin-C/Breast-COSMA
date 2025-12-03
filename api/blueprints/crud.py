@@ -7,6 +7,8 @@ from datetime import datetime, date, timedelta
 from sqlalchemy import func, case, desc, and_
 from dotenv import load_dotenv
 import requests
+from utils.llm_service.consult import Consult
+
 load_dotenv()
 
 from api.extensions import db

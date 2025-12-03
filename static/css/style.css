@@ -512,18 +512,26 @@ div.content-card {
 }
 
 /* 随访进度条 */
-.progress-bar-labels {
-    flex: 1;
+.progress-bar-labels.new-progress-labels {
+    /* 保持 flex 布局以均匀分布 */
     display: flex;
-    justify-content: space-between;
-    padding: 0 10px; /* 对应节点的-50%偏移 */
-    margin: 0 20px;
-    min-width: 400px; /* 给进度条标签一个最小宽度 */
+    justify-content: space-between; 
+    /* 7 份分割需要 8 个点，8 个点之间有 7 个间隔 */
+    /* 我们使用 space-between，让第一个点在 0%，最后一个点在 100% */
 }
-.progress-bar-labels span {
-    width: 0;
+
+/* 强制让 8 个标签均匀分配宽度 */
+.progress-bar-labels.new-progress-labels span {
+    flex-grow: 1; /* 均分空间 */
+    /* 仅最后一个标签需要靠右对齐，以便它的文字不会溢出进度条右端 */
     text-align: center;
     white-space: nowrap;
+    width: auto; /* 覆盖旧的 width: 0; */
+}
+
+/* 特别调整最后一个标签，确保文本位于进度条末尾 */
+.progress-bar-labels.new-progress-labels span:last-child {
+    text-align: right;
 }
 
 .progress-bar-container {

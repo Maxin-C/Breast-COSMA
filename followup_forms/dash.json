@@ -121,6 +121,7 @@
       "section_id": "part1_activity",
       "is_optional": false,
       "title": "第一部份:活动能力",
+      "form_type": "上肢功能问卷",
       "questions": [
         {
           "id": "q1",
@@ -216,6 +217,7 @@
       "section_id": "part2_symptoms",
       "is_optional": false,
       "title": "第二部份:病症严重程度",
+      "form_type": "上肢功能问卷",
       "questions": [
         {
           "id": "q9",
@@ -255,6 +257,7 @@
     {
       "section_id": "part3_work_optional",
       "title": "第三部份(选择部份):工作能力",
+      "form_type": "上肢功能问卷",
       "is_optional": true,
       "relevance_question": "请问您目前有工作吗(家务也算在内)?",
       "questions": [
@@ -307,6 +310,7 @@
     {
       "section_id": "part4_sports_music_optional",
       "title": "第四部份(选择部份):高技巧的体育活动或音乐弹奏",
+      "form_type": "上肢功能问卷",
       "is_optional": true,
       "relevance_question": "请问您平时有参加任何体育活动或弹奏乐器吗?",
       "questions": [
@@ -359,6 +363,7 @@
     {
       "section_id": "physical_wellbeing",
       "title": "生理状况",
+      "form_type": "生活质量问卷",
       "is_optional": false,
       "questions": [
           {
@@ -549,6 +554,7 @@
       "section_id": "social_family_wellbeing",
       "is_optional": false,
       "title": "社会/家庭状况",
+      "form_type": "生活质量问卷",
       "questions": [
           {
               "id": "GS1",
@@ -712,6 +718,7 @@
       "section_id": "emotional_wellbeing",
       "is_optional": false,
       "title": "情感状况",
+      "form_type": "生活质量问卷",
       "questions": [
           {
               "id": "GE1",
@@ -875,6 +882,7 @@
       "section_id": "functional_wellbeing",
       "is_optional": false,
       "title": "功能状况",
+      "form_type": "生活质量问卷",
       "questions": [
           {
               "id": "GF1",
@@ -1064,6 +1072,7 @@
       "section_id": "additional_concerns",
       "is_optional": false,
       "title": "附加关注",
+      "form_type": "生活质量问卷",
       "questions": [
           {
               "id": "B1",
