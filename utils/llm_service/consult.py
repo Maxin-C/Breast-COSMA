@@ -32,47 +32,57 @@ class Consult:
     
     def process_message(self, user_id: int, query: str, conversation_id: Optional[str] = None, mode: str = 'consult', end_conversation: bool = False) -> Dict[str, Any]:
         is_follow_up_mode = (mode == 'followup')
-        original_conversation_id = conversation_id
         
         # --- 新增：用于返回给前端的提示信息 ---
         resume_message = None 
-
-        # --- 修改：查找24小时内未完成的随访 ---
-        if is_follow_up_mode and not conversation_id:
-            twenty_four_hours_ago = datetime.now() - timedelta(hours=24) # 计算24小时前的时间
+        
+        # --- 核心修改：随访模式下的会话管理 ---
+        if is_follow_up_mode:
             
-            incomplete_followup = db.session.query(ChatHistory).filter(
+            # 1. 查找所有处于 'followup_in_progress' 状态的会话
+            all_in_progress_followups = db.session.query(ChatHistory).filter(
                 ChatHistory.user_id == user_id,
                 ChatHistory.is_follow_up == True,
-                ChatHistory.status == 'followup_in_progress', # 查找进行中的随访
-                ChatHistory.timestamp >= twenty_four_hours_ago  # 限制在24小时内
-            ).order_by(ChatHistory.timestamp.desc()).first()
+                ChatHistory.status == 'followup_in_progress',
+            ).order_by(ChatHistory.timestamp.desc()).all()
             
-            if incomplete_followup:
-                print(f"Resuming incomplete followup conversation (within 24h): {incomplete_followup.conversation_id}")
-                conversation_id = incomplete_followup.conversation_id
+            latest_incomplete_id = None
+            
+            if not conversation_id and all_in_progress_followups:
+                # 检查最新未完成的会话是否在 24 小时内
+                latest_incomplete = all_in_progress_followups[0]
+                twenty_four_hours_ago = datetime.now() - timedelta(hours=24)
                 
-                # --- 新增：设置提示消息 ---
-                resume_message = f"检测到您在 {incomplete_followup.timestamp.strftime('%Y-%m-%d %H:%M')} 有一个未完成的随访，我们将继续。"
-        # --- 结束修改 ---
-
+                if latest_incomplete.timestamp >= twenty_four_hours_ago:
+                    # 2. 如果在 24 小时内，恢复它
+                    latest_incomplete_id = latest_incomplete.conversation_id
+                    conversation_id = latest_incomplete_id
+                    resume_message = f"检测到您在 {latest_incomplete.timestamp.strftime('%Y-%m-%d %H:%M')} 有一个未完成的随访，我们将继续。"
+                
+                # 3. 中断所有其他或过期的 'followup_in_progress' 会话
+                for record in all_in_progress_followups:
+                    if record.conversation_id != latest_incomplete_id:
+                        print(f"Force closing or interrupting old followup: {record.conversation_id}")
+                        # 总结并显式标记为中断
+                        self.end_and_summarize_conversation(record.conversation_id, mark_interrupted=True)
+                        
+        # --- 结束核心修改 ---
 
         if conversation_id:
             record = db.session.query(ChatHistory).filter(ChatHistory.conversation_id == conversation_id).first()
             
-            # --- 修改：处理模式切换 ---
-            # 检查模式是否不匹配 (例如，用户在随访中发起了普通咨询)
+            # --- 处理模式切换 (不变，但现在只会处理当前有效的会话) ---
             if record and record.is_follow_up != is_follow_up_mode:
-                # 并且随访仍在进行中
                 if record.status == 'followup_in_progress':
-                    # 我们只总结，不改变其 'followup_in_progress' 状态，以便下次可以继续
-                    print(f"Mode mismatch. Summarizing previous {record.status} conversation {conversation_id}, status remains unchanged.")
-                    self.end_and_summarize_conversation(conversation_id, mark_completed=False) # 明确告知不要标记为完成
+                    # 普通咨询中断随访，标记为 interrupted
+                    print(f"Mode mismatch. Summarizing previous {record.status} conversation {conversation_id}, marking as interrupted.")
+                    self.end_and_summarize_conversation(conversation_id, mark_interrupted=True) 
                 
                 # 无论如何，都要开始一个新会话
                 conversation_id = None
             # --- 结束修改 ---
 
+        # 如果 mode 是 followup 且没有找到或创建 conversation_id，这里会生成一个新的
         if is_follow_up_mode:
             response = self.chat_followup(user_id=user_id, user_query=query, conversation_id=conversation_id, end_conversation=end_conversation)
         else:
@@ -86,17 +96,15 @@ class Consult:
         # --- 结束新增 ---
 
         if end_conversation and final_conversation_id:
-            # --- 修改：手动结束时只总结，不改变状态 ---
-            # 状态的改变（如果需要）由 chat_followup 内部的自然完成逻辑处理
-            # 这里的 False 确保了随访状态不会被错误地标记为 completed
-            self.end_and_summarize_conversation(final_conversation_id, mark_completed=False)
-            response['status_message'] = 'Conversation has been ended and summarized.'
-            
-            # 明确告知前端，随访没有“完成”，只是被“结束”（中断）了
-            if response.get('followup_complete') == False:
-                 response['status_message'] += " (Follow-up remains in_progress)"
-            # --- 结束修改 ---
-
+            # 手动结束：如果是随访，标记为中断
+            is_followup_record = db.session.query(ChatHistory).filter(ChatHistory.conversation_id == final_conversation_id).first()
+            if is_followup_record and is_followup_record.is_follow_up:
+                 self.end_and_summarize_conversation(final_conversation_id, mark_interrupted=True)
+                 response['status_message'] = 'Follow-up conversation has been manually ended and marked as interrupted.'
+            else:
+                 self.end_and_summarize_conversation(final_conversation_id, mark_interrupted=False) # 对于普通咨询，只总结
+                 response['status_message'] = 'Conversation has been ended and summarized.'
+        
         return response
 
     def _get_user_context(self, user_id: int) -> str:
@@ -172,6 +180,7 @@ class Consult:
         assistant_msg_obj = {"role": "assistant", "content": assistant_message}
 
         # --- 修改：根据模式设置正确的状态 ---
+        # 随访模式开始或继续时，状态为 followup_in_progress
         new_status = 'followup_in_progress' if is_follow_up else 'consult'
         # --- 结束修改 ---
 
@@ -181,15 +190,17 @@ class Consult:
                 current_history.extend([user_msg_obj, assistant_msg_obj])
                 record.chat_history = current_history
                 
-                # --- !! 关键修复 !! ---
                 # 修复BUG：当记录已存在时，必须更新 is_follow_up 字段
-                record.is_follow_up = is_follow_up
-                # --- 结束修复 ---
+                record.is_follow_up = is_follow_up 
 
-                # --- 修改：只在会话未*自然完成*时更新状态 ---
-                if record.status != 'followup_completed':
+                # --- 关键修改：只有在状态为 'followup_completed' 或 'followup_interrupted' 时才不更新状态 ---
+                # 这里的逻辑是确保如果会话已结束，不要在下一轮又把它变回 in_progress
+                if record.status not in ['followup_completed', 'followup_interrupted']:
                     record.status = new_status
-                # --- 结束修改 ---
+                    
+                # 确保每次写入都更新 timestamp
+                record.timestamp = datetime.now() 
+                # --- 结束关键修改 ---
 
                 flag_modified(record, "chat_history")
                 db.session.commit()
@@ -199,9 +210,10 @@ class Consult:
                     'conversation_id': conversation_id,
                     'user_id': user_id,
                     'chat_history': new_history,
-                    'is_follow_up': is_follow_up, # 对新记录设置
+                    'is_follow_up': is_follow_up, 
                     'summary': None, 
-                    'status': new_status # 对新记录设置
+                    'status': new_status, # 对新记录设置
+                    'timestamp': datetime.now()
                 }
                 db_operations.add_record(ChatHistory, data)
         except Exception as e:
@@ -650,7 +662,7 @@ class Consult:
         return final_response
 
     def summarize_conversation(self, conversation_id: str,  history: Optional[List[Dict]] = None) -> str:
-        # ... (此函数内容不变) ...
+        # ... (保持不变) ...
         if history is None:
             history = self._get_conversation_history(conversation_id)
         if not history:
@@ -675,8 +687,8 @@ class Consult:
             print(f"Error summarizing conversation: {e}")
             return "无法生成对话摘要。"
     
-    # --- 修改：添加 mark_completed 参数 ---
-    def end_and_summarize_conversation(self, conversation_id: str, mark_completed: bool = False):
+    # --- 关键修改：添加 mark_interrupted 参数 ---
+    def end_and_summarize_conversation(self, conversation_id: str, mark_completed: bool = False, mark_interrupted: bool = False):
         if not conversation_id:
             return
 
@@ -695,15 +707,20 @@ class Consult:
         if summary:
             update_data['summary'] = summary
         
-        # --- 修改：根据新逻辑决定是否更新状态 ---
-        # 只有在自然完成时（由 chat_followup 调用）才应将 mark_completed 设为 True
-        # 手动结束时 (来自 process_message)，mark_completed 为 False，状态保持不变
+        # --- 关键逻辑：决定最终状态 ---
         if mark_completed and record.status != 'followup_completed':
+            # 自然完成
             update_data['status'] = 'followup_completed'
             print(f"Marking conversation as completed: {conversation_id}")
-        else:
+        elif mark_interrupted and record.status not in ['followup_completed', 'followup_interrupted']:
+            # 被其他会话或手动中断
+            update_data['status'] = 'followup_interrupted'
+            print(f"Marking conversation as interrupted: {conversation_id}")
+        elif record.status == 'followup_in_progress':
+            # 只有总结，状态不变 (用于 mode mismatch 逻辑)
             print(f"Summarizing conversation: {conversation_id}. Status remains '{record.status}'.")
-        # --- 结束修改 ---
+            
+        # 如果是 consult 模式，或者状态已经是 completed/interrupted，则只更新 summary
 
         if update_data:
             try:
@@ -711,3 +728,4 @@ class Consult:
             except Exception as e:
                 db.session.rollback()
                 print(f"Error updating record during summarization: {e}")
+        # --- 结束关键逻辑 ---

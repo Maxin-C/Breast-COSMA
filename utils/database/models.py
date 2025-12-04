@@ -140,7 +140,7 @@ class ChatHistory(db.Model):
     summary = db.Column(db.Text, nullable=True)
 
     status = db.Column(
-        db.Enum('consult', 'followup_in_progress', 'followup_completed'), 
+        db.Enum('consult', 'followup_in_progress', 'followup_completed', 'followup_interrupted'), 
         nullable=False, 
         default='consult'
     )
