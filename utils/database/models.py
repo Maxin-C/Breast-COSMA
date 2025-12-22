@@ -132,7 +132,7 @@ class ChatHistory(db.Model):
     __tablename__ = 'chat_history'
 
     message_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    conversation_id = db.Column(db.String(255), index=True)
+    conversation_id = db.Column(db.String(255), index=True) 
     user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=False)
     is_follow_up = db.Column(db.Boolean, default=False)
     chat_history = db.Column(db.JSON)

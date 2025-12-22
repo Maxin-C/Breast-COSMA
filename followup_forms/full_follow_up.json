@@ -1,0 +1,1340 @@
+{
+    "form_id": "QuickDASH_Chinese_HK_QMH_2013",
+    "form_name": "上肢功能受损程度问卷(简短版) - Chinese QuickDASH",
+    "instructions": "根据问答内容合理组织问题提问顺序。适时鼓励患者完成问卷。必须保证所有问题都问到。必须保证所有问题都问到。必须保证所有问题都问到。必须保证所有问题都问到。",
+    "scoring_rules": {
+      "DASH 受损程度/症状评分": {
+        "formula": {
+          "type": "AVERAGE_SCALE",
+          "items": ["q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10", "q11"],
+          "item_operation": "val",
+          "n_source": "count",
+          "offset": -1,
+          "scale": 25
+        },
+        "is_optional": false,
+        "description": "Calculated for Part I and II. ''n'' is the number of completed responses. May not be calculated if more than 1 item is missing."
+      },
+      "DASH 工作能力评分": {
+        "formula": {
+          "type": "AVERAGE_SCALE",
+          "items": ["q12", "q13", "q14", "q15"],
+          "item_operation": "val",
+          "n_source": 4,
+          "offset": -1,
+          "scale": 25
+        },
+        "is_optional": true,
+        "description": "Optional module score. May not be calculated if any item is missing."
+      },
+      "DASH 运动/音乐评分": {
+        "formula": {
+          "type": "AVERAGE_SCALE",
+          "items": ["q16", "q17", "q18", "q19"],
+          "item_operation": "val",
+          "n_source": 4,
+          "offset": -1,
+          "scale": 25
+        },
+        "is_optional": true,
+        "description": "Optional module score. May not be calculated if any item is missing."
+      },
+      "生理状况": {
+        "formula": {
+          "type": "SUM_SCALE",
+          "items": ["GP1", "GP2", "GP3", "GP4", "GP5", "GP6", "GP7"],
+          "item_operation": "4-val",
+          "n_source": "count",
+          "scale": 7,
+          "divide_by_n": true
+        },
+        "is_optional": false,
+        "description": "Calculated for section physical_wellbeing. ''n'' is the number of completed responses. GP1, GP2, ..., GP7 are the id of questions."
+      },
+      "社会家庭状况": {
+        "formula": {
+          "type": "SUM_SCALE",
+          "items": ["GS1", "GS2", "GS3", "GS4", "GS5", "GS6"],
+          "item_operation": "val",
+          "n_source": "count",
+          "scale": 6,
+          "divide_by_n": true
+        },
+        "is_optional": false,
+        "description": "Calculated for section social_family_wellbeing. ''n'' is the number of completed responses. GS1, GS2, ..., GS6 are the id of questions."
+      },
+      "情感状况": {
+        "formula": {
+          "type": "COMPLEX_SUM_SCALE",
+          "items": [
+            {"id": "GE1", "op": "4-val"},
+            {"id": "GE2", "op": "val"},
+            {"id": "GE3", "op": "4-val"},
+            {"id": "GE4", "op": "4-val"},
+            {"id": "GE5", "op": "4-val"},
+            {"id": "GE6", "op": "4-val"}
+          ],
+          "n_source": "count",
+          "scale": 6,
+          "divide_by_n": true
+        },
+        "is_optional": false,
+        "description": "Calculated for section emotional_wellbeing. ''n'' is the number of completed responses. GE1, GE2, ..., GE6 are the id of questions."
+      },
+      "功能状况": {
+        "formula": {
+          "type": "SUM_SCALE",
+          "items": ["GF1", "GF2", "GF3", "GF4", "GF5", "GF6", "GF7"],
+          "item_operation": "val",
+          "n_source": "count",
+          "scale": 7,
+          "divide_by_n": true
+        },
+        "is_optional": false,
+        "description": "Calculated for section functional_wellbeing. ''n'' is the number of completed responses. GF1, GF2, ..., GF7 are the id of questions."
+      },
+      "附加关注": {
+        "formula": {
+          "type": "COMPLEX_SUM_SCALE",
+          "items": [
+            {"id": "B1", "op": "4-val"},
+            {"id": "B2", "op": "4-val"},
+            {"id": "B3", "op": "4-val"},
+            {"id": "B4", "op": "val"},
+            {"id": "B5", "op": "4-val"},
+            {"id": "B6", "op": "4-val"},
+            {"id": "B7", "op": "4-val"},
+            {"id": "B8", "op": "4-val"},
+            {"id": "B9", "op": "val"},
+            {"id": "P2", "op": "4-val"}
+          ],
+          "n_source": "count",
+          "scale": 10,
+          "divide_by_n": true
+        },
+        "is_optional": false,
+        "description": "Calculated for section additional_concerns. ''n'' is the number of completed responses. B1, B2, ..., P2 are the id of questions."
+      }
+    },
+    "sections": [
+      {
+        "section_id": "part1_activity",
+        "is_optional": false,
+        "title": "第一部份:活动能力",
+        "form_type": "上肢功能问卷",
+        "questions": [
+          {
+            "id": "q1",
+            "text": "扭开紧或新的瓶盖",
+            "options": [
+              {"value": 1, "text": "没有困难"},
+              {"value": 2, "text": "少许困难"},
+              {"value": 3, "text": "中度困难"},
+              {"value": 4, "text": "非常困难"},
+              {"value": 5, "text": "不能做到"}
+            ]
+          },
+          {
+            "id": "q2",
+            "text": "做消耗大量体力的家务(例如:抹窗或洗擦地板)",
+            "options": [
+              {"value": 1, "text": "没有困难"},
+              {"value": 2, "text": "少许困难"},
+              {"value": 3, "text": "中度困难"},
+              {"value": 4, "text": "非常困难"},
+              {"value": 5, "text": "不能做到"}
+            ]
+          },
+          {
+            "id": "q3",
+            "text": "携带购物袋或公事包",
+            "options": [
+              {"value": 1, "text": "没有困难"},
+              {"value": 2, "text": "少许困难"},
+              {"value": 3, "text": "中度困难"},
+              {"value": 4, "text": "非常困难"},
+              {"value": 5, "text": "不能做到"}
+            ]
+          },
+          {
+            "id": "q4",
+            "text": "清洗背部",
+            "options": [
+              {"value": 1, "text": "没有困难"},
+              {"value": 2, "text": "少许困难"},
+              {"value": 3, "text": "中度困难"},
+              {"value": 4, "text": "非常困难"},
+              {"value": 5, "text": "不能做到"}
+            ]
+          },
+          {
+            "id": "q5",
+            "text": "用刀切食物",
+            "options": [
+              {"value": 1, "text": "没有困难"},
+              {"value": 2, "text": "少许困难"},
+              {"value": 3, "text": "中度困难"},
+              {"value": 4, "text": "非常困难"},
+              {"value": 5, "text": "不能做到"}
+            ]
+          },
+          {
+            "id": "q6",
+            "text": "进行一些需要上肢(包括肩膊、手臂或手部)发力或承受冲力的余闲活动(例如:打高尔夫球、打排球、打网球、锤击等)",
+            "options": [
+              {"value": 1, "text": "没有困难"},
+              {"value": 2, "text": "少许困难"},
+              {"value": 3, "text": "中度困难"},
+              {"value": 4, "text": "非常困难"},
+              {"value": 5, "text": "不能做到"}
+            ]
+          },
+          {
+            "id": "q7",
+            "text": "过去一星期内,因为你肩膊、手臂或手部的问题而影响你和家人、朋友、邻居或团体的正常社交活动,其程度有多大?",
+            "options": [
+              {"value": 1, "text": "完全没有"},
+              {"value": 2, "text": "少许"},
+              {"value": 3, "text": "中度"},
+              {"value": 4, "text": "相当大程度"},
+              {"value": 5, "text": "极度"}
+            ]
+          },
+          {
+            "id": "q8",
+            "text": "过去一星期内,你的工作或其他日常活动,有没有因你肩膊、手臂或手部的问题而受到限制?",
+            "options": [
+              {"value": 1, "text": "完全没有限制"},
+              {"value": 2, "text": "少许限制"},
+              {"value": 3, "text": "中度限制"},
+              {"value": 4, "text": "非常受限制"},
+              {"value": 5, "text": "不能做到"}
+            ]
+          }
+        ]
+      },
+      {
+        "section_id": "part2_symptoms",
+        "is_optional": false,
+        "title": "第二部份:病症严重程度",
+        "form_type": "上肢功能问卷",
+        "questions": [
+          {
+            "id": "q9",
+            "text": "肩膊、手臂或手部感到痛楚",
+            "options": [
+              {"value": 1, "text": "没有"},
+              {"value": 2, "text": "轻微"},
+              {"value": 3, "text": "中度"},
+              {"value": 4, "text": "严重"},
+              {"value": 5, "text": "极度"}
+            ]
+          },
+          {
+            "id": "q10",
+            "text": "肩膊、手臂或手部有被针刺的感觉",
+            "options": [
+              {"value": 1, "text": "没有"},
+              {"value": 2, "text": "轻微"},
+              {"value": 3, "text": "中度"},
+              {"value": 4, "text": "严重"},
+              {"value": 5, "text": "极度"}
+            ]
+          },
+          {
+            "id": "q11",
+            "text": "过去一星期内,由于你肩膊、手臂或手部的痛楚而引致睡眠困难,其程度有多大?",
+            "options": [
+              {"value": 1, "text": "没有困难"},
+              {"value": 2, "text": "少许困难"},
+              {"value": 3, "text": "中度困难"},
+              {"value": 4, "text": "非常困难"},
+              {"value": 5, "text": "困难至不能入睡"}
+            ]
+          }
+        ]
+      },
+      {
+        "section_id": "part3_work_optional",
+        "title": "第三部份(选择部份):工作能力",
+        "form_type": "上肢功能问卷",
+        "is_optional": true,
+        "relevance_question": "请问您目前有工作吗(家务也算在内)?",
+        "questions": [
+          {
+            "id": "q12",
+            "text": "以惯常的技巧和方法工作,困难有多大?",
+            "options": [
+              {"value": 1, "text": "没有困难"},
+              {"value": 2, "text": "少许困难"},
+              {"value": 3, "text": "中度困难"},
+              {"value": 4, "text": "非常困难"},
+              {"value": 5, "text": "不能做到"}
+            ]
+          },
+          {
+            "id": "q13",
+            "text": "由于肩膊、手臂或手部痛楚,做日常工作时的困难有多大?",
+            "options": [
+              {"value": 1, "text": "没有困难"},
+              {"value": 2, "text": "少许困难"},
+              {"value": 3, "text": "中度困难"},
+              {"value": 4, "text": "非常困难"},
+              {"value": 5, "text": "不能做到"}
+            ]
+          },
+          {
+            "id": "q14",
+            "text": "工作时,要达致你想做到的一样,困难有多大?",
+            "options": [
+              {"value": 1, "text": "没有困难"},
+              {"value": 2, "text": "少许困难"},
+              {"value": 3, "text": "中度困难"},
+              {"value": 4, "text": "非常困难"},
+              {"value": 5, "text": "不能做到"}
+            ]
+          },
+          {
+            "id": "q15",
+            "text": "用你平常所需要的时间去完成工作,困难有多大?",
+            "options": [
+              {"value": 1, "text": "没有困难"},
+              {"value": 2, "text": "少许困难"},
+              {"value": 3, "text": "中度困难"},
+              {"value": 4, "text": "非常困难"},
+              {"value": 5, "text": "不能做到"}
+            ]
+          }
+        ]
+      },
+      {
+        "section_id": "part4_sports_music_optional",
+        "title": "第四部份(选择部份):高技巧的体育活动或音乐弹奏",
+        "form_type": "上肢功能问卷",
+        "is_optional": true,
+        "relevance_question": "请问您平时有参加任何体育活动或弹奏乐器吗?",
+        "questions": [
+          {
+            "id": "q16",
+            "text": "以惯常的技巧弹奏乐器或进行体育活动,困难有多大?",
+            "options": [
+              {"value": 1, "text": "没有困难"},
+              {"value": 2, "text": "少许困难"},
+              {"value": 3, "text": "中度困难"},
+              {"value": 4, "text": "非常困难"},
+              {"value": 5, "text": "不能做到"}
+            ]
+          },
+          {
+            "id": "q17",
+            "text": "弹奏惯用的乐器或进行惯常的体育活动时,因为肩膊、手臂或手部痛楚,而引致的困难有多大?",
+            "options": [
+              {"value": 1, "text": "没有困难"},
+              {"value": 2, "text": "少许困难"},
+              {"value": 3, "text": "中度困难"},
+              {"value": 4, "text": "非常困难"},
+              {"value": 5, "text": "不能做到"}
+            ]
+          },
+          {
+            "id": "q18",
+            "text": "弹奏惯用的乐器或进行惯常的体育活动时,要达致你想做到的一样,困难有多大?",
+            "options": [
+              {"value": 1, "text": "没有困难"},
+              {"value": 2, "text": "少许困难"},
+              {"value": 3, "text": "中度困难"},
+              {"value": 4, "text": "非常困难"},
+              {"value": 5, "text": "不能做到"}
+            ]
+          },
+          {
+            "id": "q19",
+            "text": "用你平常所需要的时间去练习乐器或进行体育活动,困难有多大?",
+            "options": [
+              {"value": 1, "text": "没有困难"},
+              {"value": 2, "text": "少许困难"},
+              {"value": 3, "text": "中度困难"},
+              {"value": 4, "text": "非常困难"},
+              {"value": 5, "text": "不能做到"}
+            ]
+          }
+        ]
+      },
+      {
+        "section_id": "physical_wellbeing",
+        "title": "生理状况",
+        "form_type": "生活质量问卷",
+        "is_optional": false,
+        "questions": [
+            {
+                "id": "GP1",
+                "text": "我精力不济",
+                "options": [
+                    {
+                        "value": 0,
+                        "text": "一点也不"
+                    },
+                    {
+                        "value": 1,
+                        "text": "有一点"
+                    },
+                    {
+                        "value": 2,
+                        "text": "有些"
+                    },
+                    {
+                        "value": 3,
+                        "text": "相当"
+                    },
+                    {
+                        "value": 4,
+                        "text": "非常"
+                    }
+                ]
+            },
+            {
+                "id": "GP2",
+                "text": "我感到恶心",
+                "options": [
+                    {
+                        "value": 0,
+                        "text": "一点也不"
+                    },
+                    {
+                        "value": 1,
+                        "text": "有一点"
+                    },
+                    {
+                        "value": 2,
+                        "text": "有些"
+                    },
+                    {
+                        "value": 3,
+                        "text": "相当"
+                    },
+                    {
+                        "value": 4,
+                        "text": "非常"
+                    }
+                ]
+            },
+            {
+                "id": "GP3",
+                "text": "因为我身体不好，我满足不了家庭的需要",
+                "options": [
+                    {
+                        "value": 0,
+                        "text": "一点也不"
+                    },
+                    {
+                        "value": 1,
+                        "text": "有一点"
+                    },
+                    {
+                        "value": 2,
+                        "text": "有些"
+                    },
+                    {
+                        "value": 3,
+                        "text": "相当"
+                    },
+                    {
+                        "value": 4,
+                        "text": "非常"
+                    }
+                ]
+            },
+            {
+                "id": "GP4",
+                "text": "我感到疼痛",
+                "options": [
+                    {
+                        "value": 0,
+                        "text": "一点也不"
+                    },
+                    {
+                        "value": 1,
+                        "text": "有一点"
+                    },
+                    {
+                        "value": 2,
+                        "text": "有些"
+                    },
+                    {
+                        "value": 3,
+                        "text": "相当"
+                    },
+                    {
+                        "value": 4,
+                        "text": "非常"
+                    }
+                ]
+            },
+            {
+                "id": "GP5",
+                "text": "治疗的副作用让我觉得不舒服",
+                "options": [
+                    {
+                        "value": 0,
+                        "text": "一点也不"
+                    },
+                    {
+                        "value": 1,
+                        "text": "有一点"
+                    },
+                    {
+                        "value": 2,
+                        "text": "有些"
+                    },
+                    {
+                        "value": 3,
+                        "text": "相当"
+                    },
+                    {
+                        "value": 4,
+                        "text": "非常"
+                    }
+                ]
+            },
+            {
+                "id": "GP6",
+                "text": "我觉得病了",
+                "options": [
+                    {
+                        "value": 0,
+                        "text": "一点也不"
+                    },
+                    {
+                        "value": 1,
+                        "text": "有一点"
+                    },
+                    {
+                        "value": 2,
+                        "text": "有些"
+                    },
+                    {
+                        "value": 3,
+                        "text": "相当"
+                    },
+                    {
+                        "value": 4,
+                        "text": "非常"
+                    }
+                ]
+            },
+            {
+                "id": "GP7",
+                "text": "我不得不卧床",
+                "options": [
+                    {
+                        "value": 0,
+                        "text": "一点也不"
+                    },
+                    {
+                        "value": 1,
+                        "text": "有一点"
+                    },
+                    {
+                        "value": 2,
+                        "text": "有些"
+                    },
+                    {
+                        "value": 3,
+                        "text": "相当"
+                    },
+                    {
+                        "value": 4,
+                        "text": "非常"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "section_id": "social_family_wellbeing",
+        "is_optional": false,
+        "title": "社会/家庭状况",
+        "form_type": "生活质量问卷",
+        "questions": [
+            {
+                "id": "GS1",
+                "text": "我和朋友们很接近",
+                "options": [
+                    {
+                        "value": 0,
+                        "text": "一点也不"
+                    },
+                    {
+                        "value": 1,
+                        "text": "有一点"
+                    },
+                    {
+                        "value": 2,
+                        "text": "有些"
+                    },
+                    {
+                        "value": 3,
+                        "text": "相当"
+                    },
+                    {
+                        "value": 4,
+                        "text": "非常"
+                    }
+                ]
+            },
+            {
+                "id": "GS2",
+                "text": "我在感情上得到了家人的支持",
+                "options": [
+                    {
+                        "value": 0,
+                        "text": "一点也不"
+                    },
+                    {
+                        "value": 1,
+                        "text": "有一点"
+                    },
+                    {
+                        "value": 2,
+                        "text": "有些"
+                    },
+                    {
+                        "value": 3,
+                        "text": "相当"
+                    },
+                    {
+                        "value": 4,
+                        "text": "非常"
+                    }
+                ]
+            },
+            {
+                "id": "GS3",
+                "text": "我得到朋友的支持",
+                "options": [
+                    {
+                        "value": 0,
+                        "text": "一点也不"
+                    },
+                    {
+                        "value": 1,
+                        "text": "有一点"
+                    },
+                    {
+                        "value": 2,
+                        "text": "有些"
+                    },
+                    {
+                        "value": 3,
+                        "text": "相当"
+                    },
+                    {
+                        "value": 4,
+                        "text": "非常"
+                    }
+                ]
+            },
+            {
+                "id": "GS4",
+                "text": "我的家人已能正视我患病这一事实",
+                "options": [
+                    {
+                        "value": 0,
+                        "text": "一点也不"
+                    },
+                    {
+                        "value": 1,
+                        "text": "有一点"
+                    },
+                    {
+                        "value": 2,
+                        "text": "有些"
+                    },
+                    {
+                        "value": 3,
+                        "text": "相当"
+                    },
+                    {
+                        "value": 4,
+                        "text": "非常"
+                    }
+                ]
+            },
+            {
+                "id": "GS5",
+                "text": "我高兴和家里人谈论我的病情",
+                "options": [
+                    {
+                        "value": 0,
+                        "text": "一点也不"
+                    },
+                    {
+                        "value": 1,
+                        "text": "有一点"
+                    },
+                    {
+                        "value": 2,
+                        "text": "有些"
+                    },
+                    {
+                        "value": 3,
+                        "text": "相当"
+                    },
+                    {
+                        "value": 4,
+                        "text": "非常"
+                    }
+                ]
+            },
+            {
+                "id": "GS6",
+                "text": "我与自己的配偶（或给我主要支持的人）很亲近",
+                "options": [
+                    {
+                        "value": 0,
+                        "text": "一点也不"
+                    },
+                    {
+                        "value": 1,
+                        "text": "有一点"
+                    },
+                    {
+                        "value": 2,
+                        "text": "有些"
+                    },
+                    {
+                        "value": 3,
+                        "text": "相当"
+                    },
+                    {
+                        "value": 4,
+                        "text": "非常"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "section_id": "emotional_wellbeing",
+        "is_optional": false,
+        "title": "情感状况",
+        "form_type": "生活质量问卷",
+        "questions": [
+            {
+                "id": "GE1",
+                "text": "我感到悲伤",
+                "options": [
+                    {
+                        "value": 0,
+                        "text": "一点也不"
+                    },
+                    {
+                        "value": 1,
+                        "text": "有一点"
+                    },
+                    {
+                        "value": 2,
+                        "text": "有些"
+                    },
+                    {
+                        "value": 3,
+                        "text": "相当"
+                    },
+                    {
+                        "value": 4,
+                        "text": "非常"
+                    }
+                ]
+            },
+            {
+                "id": "GE2",
+                "text": "我为自己这样对待疾病感到自豪",
+                "options": [
+                    {
+                        "value": 0,
+                        "text": "一点也不"
+                    },
+                    {
+                        "value": 1,
+                        "text": "有一点"
+                    },
+                    {
+                        "value": 2,
+                        "text": "有些"
+                    },
+                    {
+                        "value": 3,
+                        "text": "相当"
+                    },
+                    {
+                        "value": 4,
+                        "text": "非常"
+                    }
+                ]
+            },
+            {
+                "id": "GE3",
+                "text": "在与疾病的抗争中，我越来越感到失望",
+                "options": [
+                    {
+                        "value": 0,
+                        "text": "一点也不"
+                    },
+                    {
+                        "value": 1,
+                        "text": "有一点"
+                    },
+                    {
+                        "value": 2,
+                        "text": "有些"
+                    },
+                    {
+                        "value": 3,
+                        "text": "相当"
+                    },
+                    {
+                        "value": 4,
+                        "text": "非常"
+                    }
+                ]
+            },
+            {
+                "id": "GE4",
+                "text": "我感到紧张",
+                "options": [
+                    {
+                        "value": 0,
+                        "text": "一点也不"
+                    },
+                    {
+                        "value": 1,
+                        "text": "有一点"
+                    },
+                    {
+                        "value": 2,
+                        "text": "有些"
+                    },
+                    {
+                        "value": 3,
+                        "text": "相当"
+                    },
+                    {
+                        "value": 4,
+                        "text": "非常"
+                    }
+                ]
+            },
+            {
+                "id": "GE5",
+                "text": "我担心可能会去世",
+                "options": [
+                    {
+                        "value": 0,
+                        "text": "一点也不"
+                    },
+                    {
+                        "value": 1,
+                        "text": "有一点"
+                    },
+                    {
+                        "value": 2,
+                        "text": "有些"
+                    },
+                    {
+                        "value": 3,
+                        "text": "相当"
+                    },
+                    {
+                        "value": 4,
+                        "text": "非常"
+                    }
+                ]
+            },
+            {
+                "id": "GE6",
+                "text": "我担心自己的病情会更糟",
+                "options": [
+                    {
+                        "value": 0,
+                        "text": "一点也不"
+                    },
+                    {
+                        "value": 1,
+                        "text": "有一点"
+                    },
+                    {
+                        "value": 2,
+                        "text": "有些"
+                    },
+                    {
+                        "value": 3,
+                        "text": "相当"
+                    },
+                    {
+                        "value": 4,
+                        "text": "非常"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "section_id": "functional_wellbeing",
+        "is_optional": false,
+        "title": "功能状况",
+        "form_type": "生活质量问卷",
+        "questions": [
+            {
+                "id": "GF1",
+                "text": "我能够工作（包括家里的工作）",
+                "options": [
+                    {
+                        "value": 0,
+                        "text": "一点也不"
+                    },
+                    {
+                        "value": 1,
+                        "text": "有一点"
+                    },
+                    {
+                        "value": 2,
+                        "text": "有些"
+                    },
+                    {
+                        "value": 3,
+                        "text": "相当"
+                    },
+                    {
+                        "value": 4,
+                        "text": "非常"
+                    }
+                ]
+            },
+            {
+                "id": "GF2",
+                "text": "我的工作（包括家里的工作）令我有成就感",
+                "options": [
+                    {
+                        "value": 0,
+                        "text": "一点也不"
+                    },
+                    {
+                        "value": 1,
+                        "text": "有一点"
+                    },
+                    {
+                        "value": 2,
+                        "text": "有些"
+                    },
+                    {
+                        "value": 3,
+                        "text": "相当"
+                    },
+                    {
+                        "value": 4,
+                        "text": "非常"
+                    }
+                ]
+            },
+            {
+                "id": "GF3",
+                "text": "我能够享受生活",
+                "options": [
+                    {
+                        "value": 0,
+                        "text": "一点也不"
+                    },
+                    {
+                        "value": 1,
+                        "text": "有一点"
+                    },
+                    {
+                        "value": 2,
+                        "text": "有些"
+                    },
+                    {
+                        "value": 3,
+                        "text": "相当"
+                    },
+                    {
+                        "value": 4,
+                        "text": "非常"
+                    }
+                ]
+            },
+            {
+                "id": "GF4",
+                "text": "我已能面对自己的疾病",
+                "options": [
+                    {
+                        "value": 0,
+                        "text": "一点也不"
+                    },
+                    {
+                        "value": 1,
+                        "text": "有一点"
+                    },
+                    {
+                        "value": 2,
+                        "text": "有些"
+                    },
+                    {
+                        "value": 3,
+                        "text": "相当"
+                    },
+                    {
+                        "value": 4,
+                        "text": "非常"
+                    }
+                ]
+            },
+            {
+                "id": "GF5",
+                "text": "我睡的很好",
+                "options": [
+                    {
+                        "value": 0,
+                        "text": "一点也不"
+                    },
+                    {
+                        "value": 1,
+                        "text": "有一点"
+                    },
+                    {
+                        "value": 2,
+                        "text": "有些"
+                    },
+                    {
+                        "value": 3,
+                        "text": "相当"
+                    },
+                    {
+                        "value": 4,
+                        "text": "非常"
+                    }
+                ]
+            },
+            {
+                "id": "GF6",
+                "text": "我在享受我过去常做的娱乐活动",
+                "options": [
+                    {
+                        "value": 0,
+                        "text": "一点也不"
+                    },
+                    {
+                        "value": 1,
+                        "text": "有一点"
+                    },
+                    {
+                        "value": 2,
+                        "text": "有些"
+                    },
+                    {
+                        "value": 3,
+                        "text": "相当"
+                    },
+                    {
+                        "value": 4,
+                        "text": "非常"
+                    }
+                ]
+            },
+            {
+                "id": "GF7",
+                "text": "我对现在的生活质量感到满意",
+                "options": [
+                    {
+                        "value": 0,
+                        "text": "一点也不"
+                    },
+                    {
+                        "value": 1,
+                        "text": "有一点"
+                    },
+                    {
+                        "value": 2,
+                        "text": "有些"
+                    },
+                    {
+                        "value": 3,
+                        "text": "相当"
+                    },
+                    {
+                        "value": 4,
+                        "text": "非常"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "section_id": "additional_concerns",
+        "is_optional": false,
+        "title": "附加关注",
+        "form_type": "生活质量问卷",
+        "questions": [
+            {
+                "id": "B1",
+                "text": "我一直气促",
+                "options": [
+                    {
+                        "value": 0,
+                        "text": "一点也不"
+                    },
+                    {
+                        "value": 1,
+                        "text": "有一点"
+                    },
+                    {
+                        "value": 2,
+                        "text": "有些"
+                    },
+                    {
+                        "value": 3,
+                        "text": "相当"
+                    },
+                    {
+                        "value": 4,
+                        "text": "非常"
+                    }
+                ]
+            },
+            {
+                "id": "B2",
+                "text": "（由于疾病）我在意自己的穿着打扮",
+                "options": [
+                    {
+                        "value": 0,
+                        "text": "一点也不"
+                    },
+                    {
+                        "value": 1,
+                        "text": "有一点"
+                    },
+                    {
+                        "value": 2,
+                        "text": "有些"
+                    },
+                    {
+                        "value": 3,
+                        "text": "相当"
+                    },
+                    {
+                        "value": 4,
+                        "text": "非常"
+                    }
+                ]
+            },
+            {
+                "id": "B3",
+                "text": "我的一只或两只胳膊肿胀或无力",
+                "options": [
+                    {
+                        "value": 0,
+                        "text": "一点也不"
+                    },
+                    {
+                        "value": 1,
+                        "text": "有一点"
+                    },
+                    {
+                        "value": 2,
+                        "text": "有些"
+                    },
+                    {
+                        "value": 3,
+                        "text": "相当"
+                    },
+                    {
+                        "value": 4,
+                        "text": "非常"
+                    }
+                ]
+            },
+            {
+                "id": "B4",
+                "text": "我感到在性方面有吸引力",
+                "options": [
+                    {
+                        "value": 0,
+                        "text": "一点也不"
+                    },
+                    {
+                        "value": 1,
+                        "text": "有一点"
+                    },
+                    {
+                        "value": 2,
+                        "text": "有些"
+                    },
+                    {
+                        "value": 3,
+                        "text": "相当"
+                    },
+                    {
+                        "value": 4,
+                        "text": "非常"
+                    }
+                ]
+            },
+            {
+                "id": "B5",
+                "text": "脱发使我烦恼",
+                "options": [
+                    {
+                        "value": 0,
+                        "text": "一点也不"
+                    },
+                    {
+                        "value": 1,
+                        "text": "有一点"
+                    },
+                    {
+                        "value": 2,
+                        "text": "有些"
+                    },
+                    {
+                        "value": 3,
+                        "text": "相当"
+                    },
+                    {
+                        "value": 4,
+                        "text": "非常"
+                    }
+                ]
+            },
+            {
+                "id": "B6",
+                "text": "我担心家里其他人有一天会得和我一样的疾病",
+                "options": [
+                    {
+                        "value": 0,
+                        "text": "一点也不"
+                    },
+                    {
+                        "value": 1,
+                        "text": "有一点"
+                    },
+                    {
+                        "value": 2,
+                        "text": "有些"
+                    },
+                    {
+                        "value": 3,
+                        "text": "相当"
+                    },
+                    {
+                        "value": 4,
+                        "text": "非常"
+                    }
+                ]
+            },
+            {
+                "id": "B7",
+                "text": "我担心紧张对我的疾病造成的影响",
+                "options": [
+                    {
+                        "value": 0,
+                        "text": "一点也不"
+                    },
+                    {
+                        "value": 1,
+                        "text": "有一点"
+                    },
+                    {
+                        "value": 2,
+                        "text": "有些"
+                    },
+                    {
+                        "value": 3,
+                        "text": "相当"
+                    },
+                    {
+                        "value": 4,
+                        "text": "非常"
+                    }
+                ]
+            },
+            {
+                "id": "B8",
+                "text": "体重的变化使我烦恼",
+                "options": [
+                    {
+                        "value": 0,
+                        "text": "一点也不"
+                    },
+                    {
+                        "value": 1,
+                        "text": "有一点"
+                    },
+                    {
+                        "value": 2,
+                        "text": "有些"
+                    },
+                    {
+                        "value": 3,
+                        "text": "相当"
+                    },
+                    {
+                        "value": 4,
+                        "text": "非常"
+                    }
+                ]
+            },
+            {
+                "id": "B9",
+                "text": "我仍能感到像一个女人",
+                "options": [
+                    {
+                        "value": 0,
+                        "text": "一点也不"
+                    },
+                    {
+                        "value": 1,
+                        "text": "有一点"
+                    },
+                    {
+                        "value": 2,
+                        "text": "有些"
+                    },
+                    {
+                        "value": 3,
+                        "text": "相当"
+                    },
+                    {
+                        "value": 4,
+                        "text": "非常"
+                    }
+                ]
+            },
+            {
+                "id": "P2",
+                "text": "我的身体的一部分很明显能感到疼痛",
+                "options": [
+                    {
+                        "value": 0,
+                        "text": "一点也不"
+                    },
+                    {
+                        "value": 1,
+                        "text": "有一点"
+                    },
+                    {
+                        "value": 2,
+                        "text": "有些"
+                    },
+                    {
+                        "value": 3,
+                        "text": "相当"
+                    },
+                    {
+                        "value": 4,
+                        "text": "非常"
+                    }
+                ]
+            }
+        ]
+    }
+    ]
+  }
