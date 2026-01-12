@@ -7,15 +7,14 @@ from mmpose.apis import MMPoseInferencer
 
 class UpperBodyDetector:
     def __init__(self, config_path, checkpoint_path, confidence_threshold=0.3, device="cuda:0", margin_ratio=0.1):
+        self.confidence_threshold = confidence_threshold
         if not os.path.exists(config_path):
             raise FileNotFoundError(f"错误: 配置文件 '{config_path}' 不存在。请检查路径或下载。")
 
         self.confidence_threshold = confidence_threshold
         self.margin_ratio = margin_ratio  # 边缘留白比例
-        self.inferencer = None
 
         self._load_model(config_path, checkpoint_path, device)
-        print("UpperBodyDetector 模型加载成功。")
 
     def _load_model(self, config_path, checkpoint_path, device="cuda:0"):
         """内部方法：加载MMPose模型。"""

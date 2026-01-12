@@ -19,3 +19,10 @@ class Config:
         }
     }
     SCHEDULER_API_ENABLED = True
+
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_size': 80,         
+        'max_overflow': 130,    
+        'pool_timeout': 30,    
+        'pool_recycle': 1800,   
+    }

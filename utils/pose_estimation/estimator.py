@@ -249,10 +249,13 @@ class Estimator:
         
         self.clip_processor = CLIPProcessor.from_pretrained(self.config.clip_model_path)
         clip_model = CLIPModel.from_pretrained(self.config.clip_model_path)
+
+        with open(self.config.model_config_path, 'r') as f:
+             model_config_dict = json.load(f)
         
         self.model = ClipSeq(
             clip_model=clip_model,
-            model_config=SimpleNamespace(**json.load(open(self.config.model_config_path, 'r'))),
+            model_config=SimpleNamespace(**model_config_dict),
             num_actual_classes=self.num_actual_classes
         )
         

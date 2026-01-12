@@ -32,11 +32,21 @@ class ReportGenerator:
 
         # 路径和参数配置
         self.video_save_path = os.getenv("VIDEO_SAVE_PATH", "uploads/videos")
-        self.exercise_desc = json.load(open(os.getenv("EXERCISE_DESC_PATH", "knowledge_base/exercise_desc.json"), 'r'))
+        with open(os.getenv("EXERCISE_DESC_PATH", "knowledge_base/exercise_desc.json"), 'r', encoding='utf-8') as f:
+            self.exercise_desc = json.load(f)
         self.fps_for_video_eval = int(os.getenv("VIDEO_FPS", 5))
         self.max_file_size_bytes = max_file_size_mb * 1024 * 1024
         
         os.makedirs(self.video_save_path, exist_ok=True)
+    
+    def _get_writer_params(self):
+        return {
+            'fps': self.fps_for_video_eval,
+            'codec': 'libx264',
+            'pixelformat': 'yuv420p',
+            'macro_block_size': None,
+            'ffmpeg_params': ['-preset', 'ultrafast'] 
+        }
 
     def generate_slice_video_feedback(self, record_id: int, exercise_id: int, start_time: datetime, end_time: datetime) -> str:
         # ... (数据库查询逻辑不变) ...
@@ -79,10 +89,7 @@ class ReportGenerator:
 
             writer = imageio.get_writer(
                 temp_video_filepath,
-                fps=self.fps_for_video_eval,
-                codec='libx264',
-                pixelformat='yuv420p',
-                macro_block_size=None
+                **self._get_writer_params()
             )
             
             for frame in all_frames:
@@ -172,7 +179,6 @@ class ReportGenerator:
             print(f"[Error] 从 {image_path} 提取帧时发生异常: {e}")
             return []
 
-    # (这个函数在上一版中已经正确，无需修改)
     def _create_video_from_frames(self, frames: List[Any], record_id: int, exercise_id: int) -> Optional[str]:
         if not frames:
             print("[Error] 没有帧可以用来创建视频。")
@@ -208,10 +214,7 @@ class ReportGenerator:
 
                 writer = imageio.get_writer(
                     video_filepath,
-                    fps=self.fps_for_video_eval,
-                    codec='libx264',
-                    pixelformat='yuv420p',
-                    macro_block_size=None
+                    **self._get_writer_params()
                 )
 
                 for frame in frames:

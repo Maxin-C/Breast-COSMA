@@ -10,7 +10,7 @@ from PIL import Image
 
 from flask import Blueprint, request, jsonify, current_app
 from werkzeug.utils import secure_filename
-
+from api import services
 from api.extensions import db
 from utils.database.models import VideoSliceImage, RecoveryRecord, RecoveryRecordDetail, Exercise
 
@@ -50,7 +50,6 @@ def detect_upper_body():
         current_app.logger.error(f"Error during detection: {e}", exc_info=True)
         return jsonify({"error": f"Internal server error: {str(e)}"}), 500
 
-
 @report_bp.route('/reports/upload_sprites', methods=['POST'])
 def upload_sprite_sheet():
     current_request_time = datetime.now()
@@ -62,11 +61,10 @@ def upload_sprite_sheet():
     record_id = request.form.get('record_id', type=int)
     exercise_id = request.form.get('exercise_id', type=int)
 
-    # 删除了 is_waiting_for_feedback 和 P 的所有逻辑
-    
     if not record_id or not exercise_id:
         return jsonify({'error': 'Fields "record_id" and "exercise_id" are required'}), 400
 
+    # 检查或创建 RecordDetail
     record_detail = RecoveryRecordDetail.query.filter_by(record_id=record_id, exercise_id=exercise_id).first()
     
     if not record_detail:
@@ -87,7 +85,12 @@ def upload_sprite_sheet():
     upload_path = UPLOAD_FOLDER
     os.makedirs(upload_path, exist_ok=True)
     saved_files_info = []
+    
+    # 获取当前的 slice_order
     slice_order_start = db.session.query(db.func.max(VideoSliceImage.slice_order)).filter_by(record_id=record_id, exercise_id=exercise_id).scalar() or 0
+
+    # 用于暂存需要放入队列的任务信息
+    tasks_to_queue = []
 
     for i, file in enumerate(files, 1):
         filename = secure_filename(f"rec{record_id}_ex{exercise_id}_{datetime.now().strftime('%Y%m%d%H%M%S%f')}_{i}.jpg")
@@ -96,42 +99,53 @@ def upload_sprite_sheet():
         
         db_relative_path = os.path.join(UPLOAD_FOLDER, filename)
 
-        try:
-            pil_image = Image.open(absolute_filepath)
-            frame_results = current_app.action_classifier_service.predict_frames_in_sprite(
-                pil_image,
-                int(exercise_id)
-            )
-        except Exception as e:
-            current_app.logger.error(f"Error predicting frames for {filename}: {e}", exc_info=True)
-            frame_results = [0] * 6 
-
+        # --- 修改开始：不再同步调用预测，而是直接存入数据库 ---
         slice_image = VideoSliceImage(
             record_id=record_id,
             exercise_id=int(exercise_id),
             slice_order=slice_order_start + i,
             image_path=db_relative_path,
             timestamp=datetime.now(),
-            is_part_of_action=(all(x == 1 for x in frame_results))
+            is_part_of_action=None  # 设置为 None，表示等待后台处理
         )
         db.session.add(slice_image)
         saved_files_info.append(db_relative_path)
-    
+        
+        # 将必要信息暂存，等待 commit 获取 ID 后入队
+        # 注意：这里我们存的是 absolute_filepath，确保 worker 能直接读取
+        tasks_to_queue.append({
+            'image_obj': slice_image,
+            'abs_path': absolute_filepath,
+            'exercise_id': exercise_id
+        })
+        # --- 修改结束 ---
+
     try:
         db.session.commit()
+        
+        # --- 提交成功后，将任务推入后台队列 ---
+        for task in tasks_to_queue:
+            # task['image_obj'].image_id 现在已经由数据库生成
+            services.inference_queue.put((
+                task['image_obj'].image_id, 
+                task['abs_path'], 
+                task['exercise_id']
+            ))
+            
+        current_app.logger.info(f"Queued {len(tasks_to_queue)} images for background processing.")
+
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Database commit failed during sprite saving: {e}")
         return jsonify({'error': f'Failed to save image records to database: {str(e)}'}), 500
 
     response = {
-        'message': f'Successfully uploaded {len(saved_files_info)} sprite sheets for exercise {exercise_id}.',
+        'message': f'Successfully uploaded {len(saved_files_info)} sprite sheets. Processing started in background.',
         'files_saved': saved_files_info,
         'exercise_id': exercise_id
     }
         
     return jsonify(response), 201
-
 
 @report_bp.route('/reports/feedback', methods=['GET'])
 def get_feedback():
